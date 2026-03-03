@@ -6,30 +6,113 @@
     <title>Exam Roster Live</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <style>
-        body { font-family: -apple-system, sans-serif; padding: 15px; background: #f9f9f9; color: #333; }
-        .controls { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        input { padding: 12px; width: 200px; border: 1px solid #ddd; border-radius: 4px; }
-        button { padding: 12px 20px; cursor: pointer; border: none; border-radius: 4px; background: #007bff; color: white; font-weight: bold; }
-        button.secondary { background: #6c757d; margin-left: 10px; }
-        table { width: 100%; border-collapse: collapse; background: white; font-size: 14px; }
-        th, td { border: 1px solid #dee2e6; padding: 10px; text-align: left; }
-        th { background: #f1f1f1; position: sticky; top: 0; }
-        .context-info { font-size: 0.85em; color: #666; margin-top: 5px; border-top: 1px dashed #eee; padding-top: 5px; }
-        .highlight { background-color: #e2d9f3 !important; }
-        .full-view { font-size: 12px; }
-        .full-view td { white-space: nowrap; }
-        #resultCount { margin: 10px 0; font-weight: bold; color: #555; }
+        /* UI Appearance: Blue Background */
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            padding: 15px; 
+            background-color: #004085; /* Deep Blue */
+            color: #333; 
+            margin: 0;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: auto;
+        }
+
+        .header-section {
+            color: white;
+            text-align: center;
+            padding: 20px 0;
+        }
+
+        .controls { 
+            background: #f8f9fa; 
+            padding: 25px; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3); 
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        /* Yellow Buttons */
+        button { 
+            padding: 12px 24px; 
+            cursor: pointer; 
+            border: 2px solid #f1c40f; 
+            border-radius: 6px; 
+            background: #f1c40f; /* Yellow */
+            color: #004085; /* Blue Text */
+            font-weight: bold; 
+            font-size: 16px;
+            transition: all 0.2s;
+        }
+        button:hover {
+            background: #d4ac0d;
+            border-color: #d4ac0d;
+        }
+        button.secondary { 
+            background: transparent; 
+            color: #f1c40f; 
+            margin-left: 10px; 
+        }
+        button.secondary:hover {
+            background: #f1c40f;
+            color: #004085;
+        }
+
+        input { 
+            padding: 12px; 
+            width: 250px; 
+            border: 1px solid #ddd; 
+            border-radius: 6px; 
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+
+        /* Table Styling */
+        #tableContainer {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+        table { width: 100%; border-collapse: collapse; background: white; }
+        
+        /* Bold Headers */
+        th { 
+            background: #e9ecef; 
+            color: #004085; 
+            font-weight: 800; 
+            text-transform: uppercase;
+            border-bottom: 3px solid #004085;
+            padding: 15px;
+            text-align: left;
+        }
+
+        td { border-bottom: 1px solid #eee; padding: 12px; text-align: left; }
+        
+        .context-info { font-size: 0.85em; color: #555; background: #fdfdfd; padding: 4px; border-radius: 4px; margin-top: 4px; }
+        .conflict { background-color: #ffcfcf !important; color: #b71c1c; font-weight: bold; }
+        .full-view-row:nth-child(even) { background: #f2f2f2; }
+        #resultCount { margin: 15px 0; font-weight: bold; color: white; text-align: center; }
     </style>
 </head>
 <body>
 
-    <div class="controls">
-        <h2>Exam Roster System</h2>
-        <input type="text" id="teacherName" placeholder="Enter Teacher Name...">
-        <button onclick="searchSchedule()">Find My Duties</button>
-        <button class="secondary" onclick="toggleFullSchedule()">View Full Schedule</button>
-        <div id="resultCount"></div>
+<div class="container">
+    <div class="header-section">
+        <h1>Exam Roster Live</h1>
+        <p>Search by teacher name to view specific duties</p>
     </div>
+
+    <div class="controls">
+        <input type="text" id="teacherName" placeholder="Enter Teacher Name..." onkeypress="if(event.key==='Enter') searchSchedule()">
+        <button onclick="searchSchedule()">Find My Duties</button>
+        <button class="secondary" onclick="toggleFullSchedule()">Full Schedule</button>
+    </div>
+
+    <div id="resultCount"></div>
 
     <div id="tableContainer" style="overflow-x: auto;">
         <table id="mainTable">
@@ -37,75 +120,82 @@
             <tbody id="tableBody"></tbody>
         </table>
     </div>
+</div>
 
-    <script>
-        let masterData = [];
-        let isFullView = false;
+<script>
+    let masterData = [];
 
-        window.onload = function() {
-            Papa.parse("master_schedule.csv", {
-                download: true,
-                skipEmptyLines: true,
-                complete: function(results) {
-                    masterData = results.data;
-                    console.log("Data loaded successfully.");
-                }
-            });
-        };
+    window.onload = function() {
+        Papa.parse("master_schedule.csv", {
+            download: true,
+            skipEmptyLines: true,
+            complete: function(results) {
+                masterData = results.data;
+                console.log("Database Loaded.");
+            }
+        });
+    };
 
-        function searchSchedule() {
-            const name = document.getElementById('teacherName').value.trim().toLowerCase();
-            if (!name) return;
-            isFullView = false;
-            
-            let matches = [];
+    function searchSchedule() {
+        const name = document.getElementById('teacherName').value.trim().toLowerCase();
+        if (!name) return;
+        
+        let matches = [];
 
-            // Starting from Row 7 (Index 6) as per your VBA
-            for (let r = 6; r < masterData.length; r++) {
-                for (let c = 2; c < masterData[r].length; c++) {
-                    let cellValue = (masterData[r][c] || "").toString();
+        // Loop Rows: Starting from Row 7 (Index 6)
+        for (let r = 6; r < masterData.length; r++) {
+            // Loop Columns: Starting from Column D (Index 3) to skip Class/Venue
+            for (let c = 3; c < masterData[r].length; c++) {
+                let cellValue = (masterData[r][c] || "").toString();
+                
+                if (cellValue.toLowerCase().includes(name)) {
                     
-                    if (cellValue.toLowerCase().includes(name)) {
-                        // FIX: Column A (0) is Class, Column B (1) is Venue
-                        let currentClass = masterData[r][0] || "N/A";
-                        let currentVenue = masterData[r][1] || "N/A";
-                        
-                        // Find Context (Before/After)
-                        let before = masterData[r-1] ? masterData[r-1][c] : "None";
-                        let after = masterData[r+1] ? masterData[r+1][c] : "None";
+                    // Logic: Class is Index 1 (Col B), Venue is Index 2 (Col C)
+                    let currentClass = masterData[r][1] || "-";
+                    let currentVenue = masterData[r][2] || "-";
+                    
+                    // Communication Context
+                    let before = (masterData[r-1] && masterData[r-1][c]) ? masterData[r-1][c] : "Start of day";
+                    let after = (masterData[r+1] && masterData[r+1][c]) ? masterData[r+1][c] : "End of day";
 
-                        // Find Period/Time by looking UP
-                        let period = "N/A", startTime = "0000", endTime = "0000";
-                        for (let checkR = r; checkR >= 0; checkR--) {
-                            if (masterData[checkR][c] && masterData[checkR][c].toString().includes("Period")) {
-                                period = masterData[checkR][c];
-                                if (masterData[checkR + 2]) {
-                                    startTime = masterData[checkR + 2][c] || "0000";
-                                    endTime = masterData[checkR + 2][c+1] || "0000";
-                                }
-                                break;
+                    // Time Search Logic
+                    let period = "N/A", startTime = "0000", endTime = "0000";
+                    for (let checkR = r; checkR >= 0; checkR--) {
+                        if (masterData[checkR][c] && masterData[checkR][c].toString().includes("Period")) {
+                            period = masterData[checkR][c];
+                            if (masterData[checkR + 2]) {
+                                startTime = masterData[checkR + 2][c] || "0000";
+                                endTime = masterData[checkR + 2][c+1] || "0000";
                             }
+                            break;
                         }
-
-                        matches.push({ currentClass, currentVenue, period, startTime, endTime, before, after });
                     }
+
+                    matches.push({ currentClass, currentVenue, period, startTime, endTime, before, after });
                 }
             }
-
-            // 1. CHRONOLOGICAL SORT
-            matches.sort((a, b) => parseInt(a.startTime) - parseInt(b.startTime));
-
-            displayPersonal(matches);
         }
 
-        function displayPersonal(matches) {
-            const head = document.getElementById('tableHead');
-            const body = document.getElementById('tableBody');
-            document.getElementById('resultCount').innerText = `Found ${matches.length} duties.`;
-            
-            head.innerHTML = `<tr><th>Time</th><th>Period</th><th>Class</th><th>Venue</th><th>Communication (Before/After)</th></tr>`;
-            body.innerHTML = matches.map(m => `
-                <tr>
+        // Chronological Sort
+        matches.sort((a, b) => parseInt(a.startTime) - parseInt(b.startTime));
+
+        displayPersonal(matches);
+    }
+
+    function displayPersonal(matches) {
+        const head = document.getElementById('tableHead');
+        const body = document.getElementById('tableBody');
+        document.getElementById('resultCount').innerText = `Found ${matches.length} Duties for "${document.getElementById('teacherName').value}"`;
+        
+        head.innerHTML = `<tr><th>Time</th><th>Period</th><th>Class</th><th>Venue</th><th>Comm. (Before/After)</th></tr>`;
+        
+        body.innerHTML = matches.map((m, index) => {
+            // Check for timing conflicts (two things at the same start time)
+            let isConflict = matches.some((other, i) => i !== index && other.startTime === m.startTime);
+            let rowClass = isConflict ? 'conflict' : '';
+
+            return `
+                <tr class="${rowClass}">
                     <td><b>${m.startTime} - ${m.endTime}</b></td>
                     <td>${m.period}</td>
                     <td>${m.currentClass}</td>
@@ -115,21 +205,23 @@
                         <div class="context-info"><b>Next:</b> ${m.after}</div>
                     </td>
                 </tr>
-            `).join('');
-        }
+            `;
+        }).join('');
+    }
 
-        function toggleFullSchedule() {
-            const head = document.getElementById('tableHead');
-            const body = document.getElementById('tableBody');
-            document.getElementById('resultCount').innerText = "Full Roster View";
-            
-            head.innerHTML = ""; // Full view headers are dynamic
-            body.innerHTML = masterData.map((row, index) => `
-                <tr class="${index < 6 ? 'highlight' : ''}">
-                    ${row.map(cell => `<td>${cell || ''}</td>`).join('')}
-                </tr>
-            `).join('');
-        }
-    </script>
+    function toggleFullSchedule() {
+        const head = document.getElementById('tableHead');
+        const body = document.getElementById('tableBody');
+        document.getElementById('resultCount').innerText = "Full Master Roster View";
+        
+        head.innerHTML = ""; 
+        body.innerHTML = masterData.map((row) => `
+            <tr class="full-view-row">
+                ${row.map(cell => `<td>${cell || ''}</td>`).join('')}
+            </tr>
+        `).join('');
+    }
+</script>
+
 </body>
 </html>
