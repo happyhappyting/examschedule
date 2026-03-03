@@ -3,111 +3,132 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Exam Roster Search</title>
+    <title>Exam Roster Live</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <style>
-        body { font-family: sans-serif; padding: 20px; line-height: 1.6; max-width: 800px; margin: auto; }
-        input, button { padding: 10px; font-size: 16px; margin-bottom: 20px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
-        th { background-color: #f4f4f4; }
-        .highlight { background-color: #ccc1da; } /* Your Purple highlight */
-        .status { color: #666; font-style: italic; }
+        body { font-family: -apple-system, sans-serif; padding: 15px; background: #f9f9f9; color: #333; }
+        .controls { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        input { padding: 12px; width: 200px; border: 1px solid #ddd; border-radius: 4px; }
+        button { padding: 12px 20px; cursor: pointer; border: none; border-radius: 4px; background: #007bff; color: white; font-weight: bold; }
+        button.secondary { background: #6c757d; margin-left: 10px; }
+        table { width: 100%; border-collapse: collapse; background: white; font-size: 14px; }
+        th, td { border: 1px solid #dee2e6; padding: 10px; text-align: left; }
+        th { background: #f1f1f1; position: sticky; top: 0; }
+        .context-info { font-size: 0.85em; color: #666; margin-top: 5px; border-top: 1px dashed #eee; padding-top: 5px; }
+        .highlight { background-color: #e2d9f3 !important; }
+        .full-view { font-size: 12px; }
+        .full-view td { white-space: nowrap; }
+        #resultCount { margin: 10px 0; font-weight: bold; color: #555; }
     </style>
 </head>
 <body>
 
-    <h2>Exam Roster Search</h2>
-    <p class="status">Enter your name to see your specific exam duties.</p>
-    
-    <input type="text" id="teacherName" placeholder="Enter Teacher Name...">
-    <button onclick="searchSchedule()">Search</button>
+    <div class="controls">
+        <h2>Exam Roster System</h2>
+        <input type="text" id="teacherName" placeholder="Enter Teacher Name...">
+        <button onclick="searchSchedule()">Find My Duties</button>
+        <button class="secondary" onclick="toggleFullSchedule()">View Full Schedule</button>
+        <div id="resultCount"></div>
+    </div>
 
-    <div id="resultCount"></div>
-    <table id="rosterTable">
-        <thead>
-            <tr>
-                <th>Class</th>
-                <th>Venue</th>
-                <th>Period</th>
-                <th>Start Time</th>
-                <th>End Time</th>
-            </tr>
-        </thead>
-        <tbody id="rosterBody"></tbody>
-    </table>
+    <div id="tableContainer" style="overflow-x: auto;">
+        <table id="mainTable">
+            <thead id="tableHead"></thead>
+            <tbody id="tableBody"></tbody>
+        </table>
+    </div>
 
     <script>
         let masterData = [];
+        let isFullView = false;
 
-        // 1. Load the CSV automatically when page opens
         window.onload = function() {
             Papa.parse("master_schedule.csv", {
                 download: true,
+                skipEmptyLines: true,
                 complete: function(results) {
                     masterData = results.data;
-                    console.log("Data loaded!");
+                    console.log("Data loaded successfully.");
                 }
             });
         };
 
         function searchSchedule() {
             const name = document.getElementById('teacherName').value.trim().toLowerCase();
-            const tbody = document.getElementById('rosterBody');
-            const countDiv = document.getElementById('resultCount');
-            tbody.innerHTML = ""; 
-            
             if (!name) return;
-
+            isFullView = false;
+            
             let matches = [];
 
-            // 2. Mimic VBA "SearchRange" (C7 to AZ222)
-            // In CSV array: Row 6 is index 6, Col C is index 2
+            // Starting from Row 7 (Index 6) as per your VBA
             for (let r = 6; r < masterData.length; r++) {
                 for (let c = 2; c < masterData[r].length; c++) {
-                    let cellValue = masterData[r][c] || "";
+                    let cellValue = (masterData[r][c] || "").toString();
                     
                     if (cellValue.toLowerCase().includes(name)) {
+                        // FIX: Column A (0) is Class, Column B (1) is Venue
+                        let currentClass = masterData[r][0] || "N/A";
+                        let currentVenue = masterData[r][1] || "N/A";
                         
-                        // 3. Find Class (Col A) and Venue (Col B)
-                        let currentClass = masterData[r][0];
-                        let currentVenue = masterData[r][1];
+                        // Find Context (Before/After)
+                        let before = masterData[r-1] ? masterData[r-1][c] : "None";
+                        let after = masterData[r+1] ? masterData[r+1][c] : "None";
 
-                        // 4. Find the "Period" and "Time" (Looking UP)
-                        let period = "N/A";
-                        let startTime = "N/A";
-                        let endTime = "N/A";
-
-                        // Search upwards for "Period" header
+                        // Find Period/Time by looking UP
+                        let period = "N/A", startTime = "0000", endTime = "0000";
                         for (let checkR = r; checkR >= 0; checkR--) {
                             if (masterData[checkR][c] && masterData[checkR][c].toString().includes("Period")) {
                                 period = masterData[checkR][c];
-                                // Time is 2 rows below the "Period" row (per your VBA)
                                 if (masterData[checkR + 2]) {
-                                    startTime = masterData[checkR + 2][c];
-                                    endTime = masterData[checkR + 2][c + 1]; // End time is usually next col
+                                    startTime = masterData[checkR + 2][c] || "0000";
+                                    endTime = masterData[checkR + 2][c+1] || "0000";
                                 }
                                 break;
                             }
                         }
 
-                        matches.push({ currentClass, currentVenue, period, startTime, endTime });
+                        matches.push({ currentClass, currentVenue, period, startTime, endTime, before, after });
                     }
                 }
             }
 
-            // 5. Display Results
-            countDiv.innerText = "Total Duties Found: " + matches.length;
-            matches.forEach(m => {
-                let row = `<tr>
+            // 1. CHRONOLOGICAL SORT
+            matches.sort((a, b) => parseInt(a.startTime) - parseInt(b.startTime));
+
+            displayPersonal(matches);
+        }
+
+        function displayPersonal(matches) {
+            const head = document.getElementById('tableHead');
+            const body = document.getElementById('tableBody');
+            document.getElementById('resultCount').innerText = `Found ${matches.length} duties.`;
+            
+            head.innerHTML = `<tr><th>Time</th><th>Period</th><th>Class</th><th>Venue</th><th>Communication (Before/After)</th></tr>`;
+            body.innerHTML = matches.map(m => `
+                <tr>
+                    <td><b>${m.startTime} - ${m.endTime}</b></td>
+                    <td>${m.period}</td>
                     <td>${m.currentClass}</td>
                     <td>${m.currentVenue}</td>
-                    <td>${m.period}</td>
-                    <td>${m.startTime}</td>
-                    <td>${m.endTime}</td>
-                </tr>`;
-                tbody.innerHTML += row;
-            });
+                    <td>
+                        <div class="context-info"><b>Prev:</b> ${m.before}</div>
+                        <div class="context-info"><b>Next:</b> ${m.after}</div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function toggleFullSchedule() {
+            const head = document.getElementById('tableHead');
+            const body = document.getElementById('tableBody');
+            document.getElementById('resultCount').innerText = "Full Roster View";
+            
+            head.innerHTML = ""; // Full view headers are dynamic
+            body.innerHTML = masterData.map((row, index) => `
+                <tr class="${index < 6 ? 'highlight' : ''}">
+                    ${row.map(cell => `<td>${cell || ''}</td>`).join('')}
+                </tr>
+            `).join('');
         }
     </script>
 </body>
