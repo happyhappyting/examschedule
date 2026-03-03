@@ -43,29 +43,35 @@
         
         th { 
             background: #e9ecef; color: #004085; font-weight: bold; font-size: 13px;
-            border-bottom: 2px solid #004085; padding: 8px; text-align: left; 
+            border-bottom: 2px solid #004085; padding: 10px; text-align: left; 
             position: sticky; top: 0; z-index: 10;
         }
 
-        td { border-bottom: 1px solid #eee; padding: 6px 10px; font-size: 14px; vertical-align: top; }
+        td { border-bottom: 1px solid #eee; padding: 8px 10px; font-size: 14px; vertical-align: top; }
         
-        /* FULL VIEW WRAPPING LOGIC */
+        /* Full View Styling */
         .full-view-row td {
             font-size: 11px;
-            min-width: 100px;
-            max-width: 180px; /* Forces wrap after ~20 chars */
+            min-width: 90px;
+            max-width: 180px;
             word-wrap: break-word;
             overflow-wrap: break-word;
-            white-space: normal; /* Allows wrapping */
-            line-height: 1.2;
+            white-space: normal;
+            line-height: 1.3;
             border-right: 1px solid #f0f0f0;
         }
 
-        .empty-row td { height: 4px; padding: 0; font-size: 2px; background-color: #f9f9f9; color: transparent; }
+        /* Logic for totally blank rows only */
+        .empty-row td { height: 2px; padding: 0; font-size: 1px; background-color: #f1f1f1; color: transparent; border: none; }
 
         .suggestion-box { background: #fff3cd; color: #856404; padding: 12px; border-radius: 8px; margin-top: 10px; display: none; }
         .suggestion-link { color: #004085; font-weight: bold; text-decoration: underline; cursor: pointer; margin-right: 15px; display: inline-block; padding: 5px; }
-        .context-info { font-size: 0.8em; color: #666; background: #f9f9f9; padding: 3px; border-radius: 3px; margin-top: 2px; }
+        
+        /* Refined Communication Column Layout */
+        .comm-cell { font-size: 0.85em; line-height: 1.4; color: #444; }
+        .comm-label { font-weight: bold; color: #004085; text-transform: uppercase; font-size: 0.75em; display: block; margin-top: 4px; border-bottom: 1px solid #eee; }
+        .comm-name { display: block; padding-left: 5px; padding-bottom: 4px; }
+
         #resultCount { margin-bottom: 10px; font-weight: bold; color: white; text-align: center; font-size: 0.9em; }
 
         @media print {
@@ -126,10 +132,11 @@
                     complete: function(results) {
                         masterData = results.data;
                         // Populate clean list of names
-                        for (let r = 6; r < masterData.length; r++) {
-                            for (let c = 3; c < masterData[r].length; c++) {
+                        for (let r = 0; r < masterData.length; r++) {
+                            for (let c = 0; c < masterData[r].length; c++) {
                                 let val = (masterData[r][c] || "").toString().trim();
-                                if (val && val.length > 3 && !val.includes("Period") && !val.includes(":") ) {
+                                // Clean name list: exclude times, headers, and short strings
+                                if (val && val.length > 3 && !val.includes("Period") && !/\d/.test(val)) {
                                     teacherList.add(val);
                                 }
                             }
@@ -151,18 +158,17 @@
         
         let matches = [];
 
-        for (let r = 6; r < masterData.length; r++) {
+        for (let r = 0; r < masterData.length; r++) {
             for (let c = 3; c < masterData[r].length; c++) {
                 let cellValue = (masterData[r][c] || "").toString();
                 
-                // STRICTER SEARCH: We only match if the input matches a full word in the cell
-                // This prevents "Tan" from showing "Tanaka" unless "Tan" is also there.
+                // Logic: Word boundary search
                 let regex = new RegExp("\\b" + name + "\\b", "i");
                 if (regex.test(cellValue)) {
                     let currentClass = masterData[r][1] || "-";
                     let currentVenue = masterData[r][2] || "-";
-                    let before = (masterData[r-1] && masterData[r-1][c]) ? masterData[r-1][c] : "Start";
-                    let after = (masterData[r+1] && masterData[r+1][c]) ? masterData[r+1][c] : "End";
+                    let before = (masterData[r-1] && masterData[r-1][c]) ? masterData[r-1][c] : "---";
+                    let after = (masterData[r+1] && masterData[r+1][c]) ? masterData[r+1][c] : "---";
 
                     let period = "N/A", startTime = "0000", endTime = "0000";
                     for (let checkR = r; checkR >= 0; checkR--) {
@@ -194,10 +200,9 @@
         const suggestionLinks = document.getElementById('suggestionLinks');
         suggestionLinks.innerHTML = "";
         
-        // Find names that partially contain the typed string
         let suggestions = Array.from(teacherList).filter(t => 
-            t.toLowerCase().includes(typedName) || levenshteinDistance(t.toLowerCase(), typedName) < 3
-        ).slice(0, 6);
+            t.toLowerCase().includes(typedName)
+        ).slice(0, 8);
 
         if (suggestions.length > 0) {
             suggestionBox.style.display = "block";
@@ -214,30 +219,22 @@
         }
     }
 
-    function levenshteinDistance(a, b) {
-        const matrix = [];
-        for (let i = 0; i <= b.length; i++) matrix[i] = [i];
-        for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
-        for (let i = 1; i <= b.length; i++) {
-            for (let j = 1; j <= a.length; j++) {
-                if (b.charAt(i - 1) === a.charAt(j - 1)) matrix[i][j] = matrix[i - 1][j - 1];
-                else matrix[i][j] = Math.min(matrix[i - 1][j - 1] + 1, matrix[i][j - 1] + 1, matrix[i - 1][j] + 1);
-            }
-        }
-        return matrix[b.length][a.length];
-    }
-
     function displayPersonal(matches) {
         const head = document.getElementById('tableHead');
         const body = document.getElementById('tableBody');
-        document.getElementById('resultCount').innerText = `Duties for "${document.getElementById('teacherName').value}"`;
-        head.innerHTML = `<tr><th>Time</th><th>Period</th><th>Class</th><th>Venue</th><th>Communication</th></tr>`;
+        document.getElementById('resultCount').innerText = `Results for "${document.getElementById('teacherName').value}"`;
+        head.innerHTML = `<tr><th>Time</th><th>Period/Class</th><th>Venue</th><th>Communication (Before & After)</th></tr>`;
+        
         body.innerHTML = matches.map(m => `<tr>
-            <td><b>${m.startTime} - ${m.endTime}</b></td>
-            <td>${m.period}</td>
-            <td>${m.currentClass}</td>
+            <td><b>${m.startTime}<br>to<br>${m.endTime}</b></td>
+            <td><b>${m.period}</b><br>${m.currentClass}</td>
             <td>${m.currentVenue}</td>
-            <td><div class="context-info"><b>P:</b> ${m.before} | <b>N:</b> ${m.after}</div></td>
+            <td class="comm-cell">
+                <span class="comm-label">Before:</span>
+                <span class="comm-name">${m.before}</span>
+                <span class="comm-label">After:</span>
+                <span class="comm-name">${m.after}</span>
+            </td>
         </tr>`).join('');
     }
 
@@ -245,10 +242,12 @@
         const head = document.getElementById('tableHead');
         const body = document.getElementById('tableBody');
         document.getElementById('suggestionBox').style.display = "none";
-        document.getElementById('resultCount').innerText = "Full Roster (Wrapped Text)";
+        document.getElementById('resultCount').innerText = "Full Master View";
         head.innerHTML = ""; 
+        
         body.innerHTML = masterData.map((row) => {
-            const hasData = row.slice(3).some(cell => cell && cell.trim().length > 0);
+            // Updated logic: if ANY cell in the row has a word/data, show it.
+            const hasData = row.some(cell => cell && cell.toString().trim().length > 0);
             const rowClass = hasData ? "full-view-row" : "empty-row";
             return `<tr class="${rowClass}">${row.map(cell => `<td>${cell || ''}</td>`).join('')}</tr>`;
         }).join('');
