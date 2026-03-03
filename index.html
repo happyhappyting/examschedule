@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Exam Roster Live</title>
+    <title>SAS(S) Exam Schedule</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <style>
-        /* UI Appearance: Blue Background */
+        /* UI Appearance */
         body { 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
             padding: 15px; 
@@ -16,7 +16,7 @@
         }
 
         .container {
-            max-width: 1000px;
+            max-width: 1200px;
             margin: auto;
         }
 
@@ -24,6 +24,21 @@
             color: white;
             text-align: center;
             padding: 20px 0;
+        }
+
+        /* Yellow Title */
+        .header-section h1 {
+            color: #f1c40f;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .reminder {
+            color: #ffda6a;
+            font-size: 0.9em;
+            font-style: italic;
+            margin-top: 5px;
         }
 
         .controls { 
@@ -41,8 +56,8 @@
             cursor: pointer; 
             border: 2px solid #f1c40f; 
             border-radius: 6px; 
-            background: #f1c40f; /* Yellow */
-            color: #004085; /* Blue Text */
+            background: #f1c40f; 
+            color: #004085; 
             font-weight: bold; 
             font-size: 16px;
             transition: all 0.2s;
@@ -74,9 +89,11 @@
         #tableContainer {
             background: white;
             border-radius: 8px;
-            overflow: hidden;
+            overflow: auto;
             box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            max-height: 70vh; /* Limits height for full view scrolling */
         }
+        
         table { width: 100%; border-collapse: collapse; background: white; }
         
         /* Bold Headers */
@@ -84,17 +101,25 @@
             background: #e9ecef; 
             color: #004085; 
             font-weight: 800; 
-            text-transform: uppercase;
-            border-bottom: 3px solid #004085;
-            padding: 15px;
+            border: 1px solid #ccc;
+            padding: 12px;
             text-align: left;
+            position: sticky;
+            top: 0;
+            z-index: 10;
         }
 
-        td { border-bottom: 1px solid #eee; padding: 12px; text-align: left; }
+        td { border: 1px solid #dee2e6; padding: 10px; text-align: left; }
         
+        /* Specific Full View Bordering */
+        .full-view-row td {
+            border: 1px solid #888; /* Darker borders for the big grid */
+            font-size: 12px;
+            white-space: nowrap;
+        }
+
         .context-info { font-size: 0.85em; color: #555; background: #fdfdfd; padding: 4px; border-radius: 4px; margin-top: 4px; }
         .conflict { background-color: #ffcfcf !important; color: #b71c1c; font-weight: bold; }
-        .full-view-row:nth-child(even) { background: #f2f2f2; }
         #resultCount { margin: 15px 0; font-weight: bold; color: white; text-align: center; }
     </style>
 </head>
@@ -102,19 +127,20 @@
 
 <div class="container">
     <div class="header-section">
-        <h1>Exam Roster Live</h1>
-        <p>Search by teacher name to view specific duties</p>
+        <h1>SAS(S) Exam Schedule</h1>
+        <p>Search by teacher name to view specific duties.</p>
+        <p class="reminder">⚠️ Reminder: Please type your name correctly as per the official roster.</p>
     </div>
 
     <div class="controls">
         <input type="text" id="teacherName" placeholder="Enter Teacher Name..." onkeypress="if(event.key==='Enter') searchSchedule()">
         <button onclick="searchSchedule()">Find My Duties</button>
-        <button class="secondary" onclick="toggleFullSchedule()">Full Schedule</button>
+        <button class="secondary" onclick="toggleFullSchedule()">Full Master View</button>
     </div>
 
     <div id="resultCount"></div>
 
-    <div id="tableContainer" style="overflow-x: auto;">
+    <div id="tableContainer">
         <table id="mainTable">
             <thead id="tableHead"></thead>
             <tbody id="tableBody"></tbody>
@@ -142,23 +168,17 @@
         
         let matches = [];
 
-        // Loop Rows: Starting from Row 7 (Index 6)
         for (let r = 6; r < masterData.length; r++) {
-            // Loop Columns: Starting from Column D (Index 3) to skip Class/Venue
             for (let c = 3; c < masterData[r].length; c++) {
                 let cellValue = (masterData[r][c] || "").toString();
                 
                 if (cellValue.toLowerCase().includes(name)) {
-                    
-                    // Logic: Class is Index 1 (Col B), Venue is Index 2 (Col C)
                     let currentClass = masterData[r][1] || "-";
                     let currentVenue = masterData[r][2] || "-";
                     
-                    // Communication Context
                     let before = (masterData[r-1] && masterData[r-1][c]) ? masterData[r-1][c] : "Start of day";
                     let after = (masterData[r+1] && masterData[r+1][c]) ? masterData[r+1][c] : "End of day";
 
-                    // Time Search Logic
                     let period = "N/A", startTime = "0000", endTime = "0000";
                     for (let checkR = r; checkR >= 0; checkR--) {
                         if (masterData[checkR][c] && masterData[checkR][c].toString().includes("Period")) {
@@ -170,15 +190,12 @@
                             break;
                         }
                     }
-
                     matches.push({ currentClass, currentVenue, period, startTime, endTime, before, after });
                 }
             }
         }
 
-        // Chronological Sort
         matches.sort((a, b) => parseInt(a.startTime) - parseInt(b.startTime));
-
         displayPersonal(matches);
     }
 
@@ -190,12 +207,9 @@
         head.innerHTML = `<tr><th>Time</th><th>Period</th><th>Class</th><th>Venue</th><th>Comm. (Before/After)</th></tr>`;
         
         body.innerHTML = matches.map((m, index) => {
-            // Check for timing conflicts (two things at the same start time)
             let isConflict = matches.some((other, i) => i !== index && other.startTime === m.startTime);
-            let rowClass = isConflict ? 'conflict' : '';
-
             return `
-                <tr class="${rowClass}">
+                <tr class="${isConflict ? 'conflict' : ''}">
                     <td><b>${m.startTime} - ${m.endTime}</b></td>
                     <td>${m.period}</td>
                     <td>${m.currentClass}</td>
