@@ -1,1 +1,114 @@
-<h1>My Exam Roster is coming soon!</h1>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exam Roster Search</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <style>
+        body { font-family: sans-serif; padding: 20px; line-height: 1.6; max-width: 800px; margin: auto; }
+        input, button { padding: 10px; font-size: 16px; margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background-color: #f4f4f4; }
+        .highlight { background-color: #ccc1da; } /* Your Purple highlight */
+        .status { color: #666; font-style: italic; }
+    </style>
+</head>
+<body>
+
+    <h2>Exam Roster Search</h2>
+    <p class="status">Enter your name to see your specific exam duties.</p>
+    
+    <input type="text" id="teacherName" placeholder="Enter Teacher Name...">
+    <button onclick="searchSchedule()">Search</button>
+
+    <div id="resultCount"></div>
+    <table id="rosterTable">
+        <thead>
+            <tr>
+                <th>Class</th>
+                <th>Venue</th>
+                <th>Period</th>
+                <th>Start Time</th>
+                <th>End Time</th>
+            </tr>
+        </thead>
+        <tbody id="rosterBody"></tbody>
+    </table>
+
+    <script>
+        let masterData = [];
+
+        // 1. Load the CSV automatically when page opens
+        window.onload = function() {
+            Papa.parse("master_schedule.csv", {
+                download: true,
+                complete: function(results) {
+                    masterData = results.data;
+                    console.log("Data loaded!");
+                }
+            });
+        };
+
+        function searchSchedule() {
+            const name = document.getElementById('teacherName').value.trim().toLowerCase();
+            const tbody = document.getElementById('rosterBody');
+            const countDiv = document.getElementById('resultCount');
+            tbody.innerHTML = ""; 
+            
+            if (!name) return;
+
+            let matches = [];
+
+            // 2. Mimic VBA "SearchRange" (C7 to AZ222)
+            // In CSV array: Row 6 is index 6, Col C is index 2
+            for (let r = 6; r < masterData.length; r++) {
+                for (let c = 2; c < masterData[r].length; c++) {
+                    let cellValue = masterData[r][c] || "";
+                    
+                    if (cellValue.toLowerCase().includes(name)) {
+                        
+                        // 3. Find Class (Col A) and Venue (Col B)
+                        let currentClass = masterData[r][0];
+                        let currentVenue = masterData[r][1];
+
+                        // 4. Find the "Period" and "Time" (Looking UP)
+                        let period = "N/A";
+                        let startTime = "N/A";
+                        let endTime = "N/A";
+
+                        // Search upwards for "Period" header
+                        for (let checkR = r; checkR >= 0; checkR--) {
+                            if (masterData[checkR][c] && masterData[checkR][c].toString().includes("Period")) {
+                                period = masterData[checkR][c];
+                                // Time is 2 rows below the "Period" row (per your VBA)
+                                if (masterData[checkR + 2]) {
+                                    startTime = masterData[checkR + 2][c];
+                                    endTime = masterData[checkR + 2][c + 1]; // End time is usually next col
+                                }
+                                break;
+                            }
+                        }
+
+                        matches.push({ currentClass, currentVenue, period, startTime, endTime });
+                    }
+                }
+            }
+
+            // 5. Display Results
+            countDiv.innerText = "Total Duties Found: " + matches.length;
+            matches.forEach(m => {
+                let row = `<tr>
+                    <td>${m.currentClass}</td>
+                    <td>${m.currentVenue}</td>
+                    <td>${m.period}</td>
+                    <td>${m.startTime}</td>
+                    <td>${m.endTime}</td>
+                </tr>`;
+                tbody.innerHTML += row;
+            });
+        }
+    </script>
+</body>
+</html>
