@@ -6,121 +6,74 @@
     <title>SAS(S) Exam Schedule</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <style>
-        /* UI Appearance */
         body { 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
-            padding: 15px; 
-            background-color: #004085; /* Deep Blue */
-            color: #333; 
-            margin: 0;
+            padding: 15px; background-color: #004085; color: #333; margin: 0;
         }
-
-        .container {
-            max-width: 1200px;
-            margin: auto;
-        }
-
-        .header-section {
-            color: white;
-            text-align: center;
-            padding: 20px 0;
-        }
-
-        /* Yellow Title */
-        .header-section h1 {
-            color: #f1c40f;
-            margin-bottom: 5px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .reminder {
-            color: #ffda6a;
-            font-size: 0.9em;
-            font-style: italic;
-            margin-top: 5px;
+        .container { max-width: 1400px; margin: auto; }
+        .header-section { color: white; text-align: center; padding: 15px 0; }
+        .header-section h1 { color: #f1c40f; margin-bottom: 5px; text-transform: uppercase; }
+        .reminder { color: #ffda6a; font-size: 0.85em; font-style: italic; }
+        
+        #lastUpdated {
+            display: inline-block; background: rgba(255, 255, 255, 0.1);
+            padding: 4px 12px; border-radius: 20px; font-size: 0.75em; margin-top: 5px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
 
         .controls { 
-            background: #f8f9fa; 
-            padding: 25px; 
-            border-radius: 12px; 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3); 
-            margin-bottom: 20px;
-            text-align: center;
+            background: #f8f9fa; padding: 20px; border-radius: 12px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3); margin-bottom: 20px; text-align: center;
         }
-
-        /* Yellow Buttons */
         button { 
-            padding: 12px 24px; 
-            cursor: pointer; 
-            border: 2px solid #f1c40f; 
-            border-radius: 6px; 
-            background: #f1c40f; 
-            color: #004085; 
-            font-weight: bold; 
-            font-size: 16px;
-            transition: all 0.2s;
+            padding: 10px 20px; cursor: pointer; border: 2px solid #f1c40f; 
+            border-radius: 6px; background: #f1c40f; color: #004085; 
+            font-weight: bold; font-size: 15px; margin: 5px;
         }
-        button:hover {
-            background: #d4ac0d;
-            border-color: #d4ac0d;
-        }
-        button.secondary { 
-            background: transparent; 
-            color: #f1c40f; 
-            margin-left: 10px; 
-        }
-        button.secondary:hover {
-            background: #f1c40f;
-            color: #004085;
-        }
+        button.secondary { background: transparent; color: #f1c40f; }
+        
+        input { padding: 10px; width: 220px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; text-transform: uppercase; }
 
-        input { 
-            padding: 12px; 
-            width: 250px; 
-            border: 1px solid #ddd; 
-            border-radius: 6px; 
-            font-size: 16px;
-            margin-bottom: 10px;
-        }
-
-        /* Table Styling */
         #tableContainer {
-            background: white;
-            border-radius: 8px;
-            overflow: auto;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-            max-height: 70vh; /* Limits height for full view scrolling */
+            background: white; border-radius: 8px; overflow: auto;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2); max-height: 75vh;
         }
         
-        table { width: 100%; border-collapse: collapse; background: white; }
+        table { width: 100%; border-collapse: collapse; background: white; white-space: nowrap; }
         
-        /* Bold Headers */
         th { 
-            background: #e9ecef; 
-            color: #004085; 
-            font-weight: 800; 
-            border: 1px solid #ccc;
-            padding: 12px;
-            text-align: left;
-            position: sticky;
-            top: 0;
-            z-index: 10;
+            background: #e9ecef; color: #004085; font-weight: bold; font-size: 13px;
+            border-bottom: 2px solid #004085; padding: 8px; text-align: left; 
+            position: sticky; top: 0; z-index: 10;
         }
 
-        td { border: 1px solid #dee2e6; padding: 10px; text-align: left; }
+        td { border-bottom: 1px solid #eee; padding: 6px 10px; font-size: 14px; }
         
-        /* Specific Full View Bordering */
-        .full-view-row td {
-            border: 1px solid #888; /* Darker borders for the big grid */
-            font-size: 12px;
-            white-space: nowrap;
+        /* Compact Null/Empty Rows */
+        .empty-row td {
+            height: 4px;
+            padding: 0;
+            font-size: 2px;
+            background-color: #f9f9f9;
+            color: transparent;
         }
 
-        .context-info { font-size: 0.85em; color: #555; background: #fdfdfd; padding: 4px; border-radius: 4px; margin-top: 4px; }
-        .conflict { background-color: #ffcfcf !important; color: #b71c1c; font-weight: bold; }
-        #resultCount { margin: 15px 0; font-weight: bold; color: white; text-align: center; }
+        /* Full View specific styling */
+        .full-view-row td {
+            border-right: 1px solid #f0f0f0;
+            font-size: 12px;
+        }
+
+        .suggestion-box { background: #fff3cd; color: #856404; padding: 12px; border-radius: 8px; margin-top: 10px; display: none; }
+        .suggestion-link { color: #004085; font-weight: bold; text-decoration: underline; cursor: pointer; margin-right: 15px; }
+        .context-info { font-size: 0.8em; color: #666; background: #f9f9f9; padding: 3px; border-radius: 3px; margin-top: 2px; }
+        #resultCount { margin-bottom: 10px; font-weight: bold; color: white; text-align: center; font-size: 0.9em; }
+
+        @media print {
+            .controls, .header-section, .secondary, .suggestion-box { display: none; }
+            body { background: white; }
+            #tableContainer { max-height: none; box-shadow: none; }
+        }
     </style>
 </head>
 <body>
@@ -128,14 +81,20 @@
 <div class="container">
     <div class="header-section">
         <h1>SAS(S) Exam Schedule</h1>
-        <p>Search by teacher name to view specific duties.</p>
-        <p class="reminder">⚠️ Reminder: Please type your name correctly as per the official roster.</p>
+        <p class="reminder">⚠️ Enter name as per official roster.</p>
+        <div id="lastUpdated">Checking for updates...</div>
     </div>
 
     <div class="controls">
-        <input type="text" id="teacherName" placeholder="Enter Teacher Name..." onkeypress="if(event.key==='Enter') searchSchedule()">
+        <input type="text" id="teacherName" placeholder="ENTER NAME..." onkeypress="if(event.key==='Enter') searchSchedule()">
         <button onclick="searchSchedule()">Find My Duties</button>
         <button class="secondary" onclick="toggleFullSchedule()">Full Master View</button>
+        <button class="secondary" onclick="window.print()">Print</button>
+        
+        <div id="suggestionBox" class="suggestion-box">
+            <span>Did you mean? </span>
+            <div id="suggestionLinks" style="display: inline-block;"></div>
+        </div>
     </div>
 
     <div id="resultCount"></div>
@@ -150,34 +109,51 @@
 
 <script>
     let masterData = [];
+    let teacherList = new Set();
 
     window.onload = function() {
-        Papa.parse("master_schedule.csv", {
-            download: true,
-            skipEmptyLines: true,
-            complete: function(results) {
-                masterData = results.data;
-                console.log("Database Loaded.");
-            }
-        });
+        fetch("master_schedule.csv")
+            .then(response => {
+                const lastMod = response.headers.get("Last-Modified");
+                if (lastMod) {
+                    const date = new Date(lastMod);
+                    document.getElementById('lastUpdated').innerText = "Last Updated: " + date.toLocaleString('en-SG', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+                }
+                return response.text();
+            })
+            .then(csvText => {
+                Papa.parse(csvText, {
+                    skipEmptyLines: true,
+                    complete: function(results) {
+                        masterData = results.data;
+                        for (let r = 6; r < masterData.length; r++) {
+                            for (let c = 3; c < masterData[r].length; c++) {
+                                let val = (masterData[r][c] || "").toString().trim();
+                                if (val && val.length > 2 && !val.includes("Period")) teacherList.add(val);
+                            }
+                        }
+                    }
+                });
+            });
     };
 
-    function searchSchedule() {
-        const name = document.getElementById('teacherName').value.trim().toLowerCase();
+    function searchSchedule(manualName = null) {
+        const inputField = document.getElementById('teacherName');
+        if (manualName) inputField.value = manualName;
+        const name = inputField.value.trim().toLowerCase();
         if (!name) return;
         
+        document.getElementById('suggestionBox').style.display = "none";
         let matches = [];
 
         for (let r = 6; r < masterData.length; r++) {
             for (let c = 3; c < masterData[r].length; c++) {
                 let cellValue = (masterData[r][c] || "").toString();
-                
                 if (cellValue.toLowerCase().includes(name)) {
                     let currentClass = masterData[r][1] || "-";
                     let currentVenue = masterData[r][2] || "-";
-                    
-                    let before = (masterData[r-1] && masterData[r-1][c]) ? masterData[r-1][c] : "Start of day";
-                    let after = (masterData[r+1] && masterData[r+1][c]) ? masterData[r+1][c] : "End of day";
+                    let before = (masterData[r-1] && masterData[r-1][c]) ? masterData[r-1][c] : "Start";
+                    let after = (masterData[r+1] && masterData[r+1][c]) ? masterData[r+1][c] : "End";
 
                     let period = "N/A", startTime = "0000", endTime = "0000";
                     for (let checkR = r; checkR >= 0; checkR--) {
@@ -195,45 +171,61 @@
             }
         }
 
-        matches.sort((a, b) => parseInt(a.startTime) - parseInt(b.startTime));
-        displayPersonal(matches);
+        if (matches.length > 0) {
+            matches.sort((a, b) => parseInt(a.startTime) - parseInt(b.startTime));
+            displayPersonal(matches);
+        } else {
+            document.getElementById('tableBody').innerHTML = "";
+            document.getElementById('resultCount').innerText = "No results found.";
+            findSuggestions(name);
+        }
+    }
+
+    function findSuggestions(typedName) {
+        const suggestionBox = document.getElementById('suggestionBox');
+        const suggestionLinks = document.getElementById('suggestionLinks');
+        suggestionLinks.innerHTML = "";
+        let suggestions = Array.from(teacherList).filter(t => t.toLowerCase().includes(typedName)).slice(0, 5);
+        if (suggestions.length > 0) {
+            suggestionBox.style.display = "block";
+            suggestions.forEach(s => {
+                let span = document.createElement('span');
+                span.className = "suggestion-link";
+                span.innerText = s;
+                span.onclick = () => searchSchedule(s);
+                suggestionLinks.appendChild(span);
+            });
+        }
     }
 
     function displayPersonal(matches) {
         const head = document.getElementById('tableHead');
         const body = document.getElementById('tableBody');
-        document.getElementById('resultCount').innerText = `Found ${matches.length} Duties for "${document.getElementById('teacherName').value}"`;
-        
-        head.innerHTML = `<tr><th>Time</th><th>Period</th><th>Class</th><th>Venue</th><th>Comm. (Before/After)</th></tr>`;
-        
-        body.innerHTML = matches.map((m, index) => {
-            let isConflict = matches.some((other, i) => i !== index && other.startTime === m.startTime);
-            return `
-                <tr class="${isConflict ? 'conflict' : ''}">
-                    <td><b>${m.startTime} - ${m.endTime}</b></td>
-                    <td>${m.period}</td>
-                    <td>${m.currentClass}</td>
-                    <td>${m.currentVenue}</td>
-                    <td>
-                        <div class="context-info"><b>Prev:</b> ${m.before}</div>
-                        <div class="context-info"><b>Next:</b> ${m.after}</div>
-                    </td>
-                </tr>
-            `;
-        }).join('');
+        document.getElementById('resultCount').innerText = `Duties for "${document.getElementById('teacherName').value}"`;
+        head.innerHTML = `<tr><th>Time</th><th>Period</th><th>Class</th><th>Venue</th><th>Communication</th></tr>`;
+        body.innerHTML = matches.map(m => `<tr>
+            <td><b>${m.startTime} - ${m.endTime}</b></td>
+            <td>${m.period}</td>
+            <td>${m.currentClass}</td>
+            <td>${m.currentVenue}</td>
+            <td><div class="context-info"><b>P:</b> ${m.before} | <b>N:</b> ${m.after}</div></td>
+        </tr>`).join('');
     }
 
     function toggleFullSchedule() {
         const head = document.getElementById('tableHead');
         const body = document.getElementById('tableBody');
-        document.getElementById('resultCount').innerText = "Full Master Roster View";
-        
+        document.getElementById('suggestionBox').style.display = "none";
+        document.getElementById('resultCount').innerText = "Master View (Compact)";
         head.innerHTML = ""; 
-        body.innerHTML = masterData.map((row) => `
-            <tr class="full-view-row">
-                ${row.map(cell => `<td>${cell || ''}</td>`).join('')}
-            </tr>
-        `).join('');
+        
+        body.innerHTML = masterData.map((row) => {
+            // Logic to check if row is "Null" or empty of teacher names (Columns 3 onwards)
+            const hasData = row.slice(3).some(cell => cell && cell.trim().length > 0);
+            const rowClass = hasData ? "full-view-row" : "empty-row";
+            
+            return `<tr class="${rowClass}">${row.map(cell => `<td>${cell || ''}</td>`).join('')}</tr>`;
+        }).join('');
     }
 </script>
 
