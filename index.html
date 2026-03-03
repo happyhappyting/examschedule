@@ -39,7 +39,7 @@
             box-shadow: 0 4px 10px rgba(0,0,0,0.2); max-height: 75vh;
         }
         
-        table { width: 100%; border-collapse: collapse; background: white; white-space: nowrap; }
+        table { width: 100%; border-collapse: collapse; background: white; }
         
         th { 
             background: #e9ecef; color: #004085; font-weight: bold; font-size: 13px;
@@ -47,25 +47,24 @@
             position: sticky; top: 0; z-index: 10;
         }
 
-        td { border-bottom: 1px solid #eee; padding: 6px 10px; font-size: 14px; }
+        td { border-bottom: 1px solid #eee; padding: 6px 10px; font-size: 14px; vertical-align: top; }
         
-        /* Compact Null/Empty Rows */
-        .empty-row td {
-            height: 4px;
-            padding: 0;
-            font-size: 2px;
-            background-color: #f9f9f9;
-            color: transparent;
+        /* FULL VIEW WRAPPING LOGIC */
+        .full-view-row td {
+            font-size: 11px;
+            min-width: 100px;
+            max-width: 180px; /* Forces wrap after ~20 chars */
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            white-space: normal; /* Allows wrapping */
+            line-height: 1.2;
+            border-right: 1px solid #f0f0f0;
         }
 
-        /* Full View specific styling */
-        .full-view-row td {
-            border-right: 1px solid #f0f0f0;
-            font-size: 12px;
-        }
+        .empty-row td { height: 4px; padding: 0; font-size: 2px; background-color: #f9f9f9; color: transparent; }
 
         .suggestion-box { background: #fff3cd; color: #856404; padding: 12px; border-radius: 8px; margin-top: 10px; display: none; }
-        .suggestion-link { color: #004085; font-weight: bold; text-decoration: underline; cursor: pointer; margin-right: 15px; }
+        .suggestion-link { color: #004085; font-weight: bold; text-decoration: underline; cursor: pointer; margin-right: 15px; display: inline-block; padding: 5px; }
         .context-info { font-size: 0.8em; color: #666; background: #f9f9f9; padding: 3px; border-radius: 3px; margin-top: 2px; }
         #resultCount { margin-bottom: 10px; font-weight: bold; color: white; text-align: center; font-size: 0.9em; }
 
@@ -126,10 +125,13 @@
                     skipEmptyLines: true,
                     complete: function(results) {
                         masterData = results.data;
+                        // Populate clean list of names
                         for (let r = 6; r < masterData.length; r++) {
                             for (let c = 3; c < masterData[r].length; c++) {
                                 let val = (masterData[r][c] || "").toString().trim();
-                                if (val && val.length > 2 && !val.includes("Period")) teacherList.add(val);
+                                if (val && val.length > 3 && !val.includes("Period") && !val.includes(":") ) {
+                                    teacherList.add(val);
+                                }
                             }
                         }
                     }
@@ -141,15 +143,22 @@
         const inputField = document.getElementById('teacherName');
         if (manualName) inputField.value = manualName;
         const name = inputField.value.trim().toLowerCase();
-        if (!name) return;
         
         document.getElementById('suggestionBox').style.display = "none";
+        document.getElementById('tableBody').innerHTML = "";
+        
+        if (!name || name.length < 2) return;
+        
         let matches = [];
 
         for (let r = 6; r < masterData.length; r++) {
             for (let c = 3; c < masterData[r].length; c++) {
                 let cellValue = (masterData[r][c] || "").toString();
-                if (cellValue.toLowerCase().includes(name)) {
+                
+                // STRICTER SEARCH: We only match if the input matches a full word in the cell
+                // This prevents "Tan" from showing "Tanaka" unless "Tan" is also there.
+                let regex = new RegExp("\\b" + name + "\\b", "i");
+                if (regex.test(cellValue)) {
                     let currentClass = masterData[r][1] || "-";
                     let currentVenue = masterData[r][2] || "-";
                     let before = (masterData[r-1] && masterData[r-1][c]) ? masterData[r-1][c] : "Start";
@@ -175,8 +184,7 @@
             matches.sort((a, b) => parseInt(a.startTime) - parseInt(b.startTime));
             displayPersonal(matches);
         } else {
-            document.getElementById('tableBody').innerHTML = "";
-            document.getElementById('resultCount').innerText = "No results found.";
+            document.getElementById('resultCount').innerText = "No exact matches found.";
             findSuggestions(name);
         }
     }
@@ -185,17 +193,38 @@
         const suggestionBox = document.getElementById('suggestionBox');
         const suggestionLinks = document.getElementById('suggestionLinks');
         suggestionLinks.innerHTML = "";
-        let suggestions = Array.from(teacherList).filter(t => t.toLowerCase().includes(typedName)).slice(0, 5);
+        
+        // Find names that partially contain the typed string
+        let suggestions = Array.from(teacherList).filter(t => 
+            t.toLowerCase().includes(typedName) || levenshteinDistance(t.toLowerCase(), typedName) < 3
+        ).slice(0, 6);
+
         if (suggestions.length > 0) {
             suggestionBox.style.display = "block";
             suggestions.forEach(s => {
                 let span = document.createElement('span');
                 span.className = "suggestion-link";
                 span.innerText = s;
-                span.onclick = () => searchSchedule(s);
+                span.onclick = () => {
+                    document.getElementById('teacherName').value = s;
+                    searchSchedule(s);
+                };
                 suggestionLinks.appendChild(span);
             });
         }
+    }
+
+    function levenshteinDistance(a, b) {
+        const matrix = [];
+        for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+        for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+        for (let i = 1; i <= b.length; i++) {
+            for (let j = 1; j <= a.length; j++) {
+                if (b.charAt(i - 1) === a.charAt(j - 1)) matrix[i][j] = matrix[i - 1][j - 1];
+                else matrix[i][j] = Math.min(matrix[i - 1][j - 1] + 1, matrix[i][j - 1] + 1, matrix[i - 1][j] + 1);
+            }
+        }
+        return matrix[b.length][a.length];
     }
 
     function displayPersonal(matches) {
@@ -216,14 +245,11 @@
         const head = document.getElementById('tableHead');
         const body = document.getElementById('tableBody');
         document.getElementById('suggestionBox').style.display = "none";
-        document.getElementById('resultCount').innerText = "Master View (Compact)";
+        document.getElementById('resultCount').innerText = "Full Roster (Wrapped Text)";
         head.innerHTML = ""; 
-        
         body.innerHTML = masterData.map((row) => {
-            // Logic to check if row is "Null" or empty of teacher names (Columns 3 onwards)
             const hasData = row.slice(3).some(cell => cell && cell.trim().length > 0);
             const rowClass = hasData ? "full-view-row" : "empty-row";
-            
             return `<tr class="${rowClass}">${row.map(cell => `<td>${cell || ''}</td>`).join('')}</tr>`;
         }).join('');
     }
