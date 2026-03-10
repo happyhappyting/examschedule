@@ -47,18 +47,21 @@
         }
         td { border-bottom: 1px solid #eee; padding: 8px 10px; font-size: 14px; vertical-align: top; }
         
-        /* Master View Bolding & Wrapping */
+        /* Master View Bolding B (2nd child) and C (3rd child) */
+        .full-view-row td:nth-child(2), 
+        .full-view-row td:nth-child(3) { 
+            font-weight: bold !important; 
+            color: #000 !important;
+            background-color: transparent !important; /* Overwrites highlight color */
+        }
+
         .full-view-row td {
             font-size: 11px; min-width: 90px; max-width: 180px;
             word-wrap: break-word; overflow-wrap: break-word; white-space: normal;
             line-height: 1.3; border-right: 1px solid #f0f0f0;
         }
-        /* Bold Col C (index 2) and Col D (index 3) */
-        .full-view-row td:nth-child(3), .full-view-row td:nth-child(4) { font-weight: bold; color: #000; }
         
-        /* Highlight Period/Time keywords */
-        .highlight-header { font-weight: 900 !important; color: #004085 !important; background-color: #f0f4f8; }
-
+        .highlight-header { font-weight: 900; color: #004085; background-color: #f0f4f8; }
         .empty-row td { height: 2px; padding: 0; font-size: 1px; background-color: #f1f1f1; color: transparent; border: none; }
 
         .suggestion-box { background: #fff3cd; color: #856404; padding: 15px; border-radius: 8px; margin-top: 10px; display: none; text-align: center; border: 1px solid #ffeeba; }
@@ -181,30 +184,27 @@
 
         if (exactMatchFound) {
             rawMatches.sort((a, b) => parseInt(a.startTime) - parseInt(b.startTime));
-            const mergedMatches = mergeDuties(rawMatches);
-            displayPersonal(mergedMatches);
+            displayPersonal(mergeDuties(rawMatches));
         } else {
             document.getElementById('resultCount').innerText = "No exact match for '" + searchTerm + "'.";
             findSuggestions(searchLower);
         }
     }
 
-    // NEW: Function to merge back-to-back duties in same Class/Venue
     function mergeDuties(matches) {
         if (matches.length === 0) return [];
         let merged = [];
-        let current = Object.assign({}, matches[0]);
+        let current = JSON.parse(JSON.stringify(matches[0]));
 
         for (let i = 1; i < matches.length; i++) {
             let next = matches[i];
-            // If same Class AND same Venue, and it's sequential (simplified check)
             if (next.currentClass === current.currentClass && next.currentVenue === current.currentVenue) {
-                current.endTime = next.endTime; // Extend the end time
-                current.period = current.period + " & " + next.period; // Merge period names
-                current.after = next.after; // Update the 'after' communication context
+                current.endTime = next.endTime;
+                current.period = current.period + " & " + next.period;
+                current.after = next.after;
             } else {
                 merged.push(current);
-                current = Object.assign({}, next);
+                current = JSON.parse(JSON.stringify(next));
             }
         }
         merged.push(current);
@@ -215,7 +215,13 @@
         const suggestionBox = document.getElementById('suggestionBox');
         const suggestionLinks = document.getElementById('suggestionLinks');
         suggestionLinks.innerHTML = "";
-        let suggestions = Array.from(teacherList).filter(t => t.toLowerCase().includes(typedName) || levenshteinDistance(t.toLowerCase(), typedName) < 3).slice(0, 10);
+        
+        // Strict Fuzzy Logic: Only 1 character difference allowed
+        let suggestions = Array.from(teacherList).filter(t => {
+            let lowerT = t.toLowerCase();
+            return levenshteinDistance(lowerT, typedName) === 1;
+        }).slice(0, 5);
+
         if (suggestions.length > 0) {
             suggestionBox.style.display = "block";
             suggestions.forEach(s => {
@@ -229,13 +235,11 @@
     }
 
     function levenshteinDistance(a, b) {
-        const matrix = [];
-        for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+        const matrix = Array.from({ length: b.length + 1 }, (_, i) => [i]);
         for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
         for (let i = 1; i <= b.length; i++) {
             for (let j = 1; j <= a.length; j++) {
-                if (b.charAt(i - 1) === a.charAt(j - 1)) matrix[i][j] = matrix[i - 1][j - 1];
-                else matrix[i][j] = Math.min(matrix[i - 1][j - 1] + 1, matrix[i][j - 1] + 1, matrix[i - 1][j] + 1);
+                matrix[i][j] = b[i-1] === a[j-1] ? matrix[i-1][j-1] : Math.min(matrix[i-1][j-1], matrix[i][j-1], matrix[i-1][j]) + 1;
             }
         }
         return matrix[b.length][a.length];
@@ -245,18 +249,13 @@
         const head = document.getElementById('tableHead');
         const body = document.getElementById('tableBody');
         document.getElementById('resultCount').innerText = `Results for "${document.getElementById('teacherName').value}"`;
-        // Reordered: Period first
         head.innerHTML = `<tr><th>Period</th><th>Time</th><th>Class</th><th>Venue</th><th>Communication</th></tr>`;
-        
         body.innerHTML = matches.map(m => `<tr>
             <td><b>${m.period}</b></td>
             <td>${m.startTime} - ${m.endTime}</td>
             <td><b>${m.currentClass}</b></td>
             <td>${m.currentVenue}</td>
-            <td>
-                <span class="comm-label">Before:</span><span class="comm-name">${m.before}</span>
-                <span class="comm-label">After:</span><span class="comm-name">${m.after}</span>
-            </td>
+            <td><span class="comm-label">Before:</span><span class="comm-name">${m.before}</span><span class="comm-label">After:</span><span class="comm-name">${m.after}</span></td>
         </tr>`).join('');
     }
 
@@ -269,14 +268,13 @@
         body.innerHTML = masterData.map((row) => {
             const hasData = row.some(cell => cell && cell.toString().trim().length > 0);
             const rowClass = hasData ? "full-view-row" : "empty-row";
-            
-            let cellsHTML = row.map(cell => {
+            let cellsHTML = row.map((cell, idx) => {
                 let cellText = (cell || '').toString();
-                // Apply styling to headers/keywords
                 let isHeader = cellText.toLowerCase().includes('period') || cellText.toLowerCase().includes('time');
-                return `<td class="${isHeader ? 'highlight-header' : ''}">${cellText}</td>`;
+                // Highlighting only if NOT in column B (idx 1) or C (idx 2)
+                let showHighlight = isHeader && idx !== 1 && idx !== 2;
+                return `<td class="${showHighlight ? 'highlight-header' : ''}">${cellText}</td>`;
             }).join('');
-            
             return `<tr class="${rowClass}">${cellsHTML}</tr>`;
         }).join('');
     }
