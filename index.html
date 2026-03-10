@@ -152,23 +152,37 @@
         return merged;
     }
 
-    function findSuggestions(typedName) {
+        function findSuggestions(typedName) {
         const suggestionBox = document.getElementById('suggestionBox');
         const suggestionLinks = document.getElementById('suggestionLinks');
         suggestionLinks.innerHTML = "";
         
-        // Remove spaces for deep fuzzy matching
-        let cleanTyped = typedName.replace(/\s+/g, '');
+        // 1. Squash the input to handle "jingting" vs "Jing Ting"
+        let cleanTyped = typedName.toLowerCase().replace(/\s+/g, '');
 
         let suggestions = Array.from(teacherList).filter(t => {
             let lowerT = t.toLowerCase();
             let cleanT = lowerT.replace(/\s+/g, '');
             
-            // 1. Check if the "squashed" search term is inside the "squashed" roster name
+            // CHECK 1: Does the squashed roster name contain the squashed search?
             if (cleanT.includes(cleanTyped)) return true;
             
-            // 2. Fallback to 1-character typo on the squashed version
-            if (levenshteinDistance(cleanT, cleanTyped) === 1) return true;
+            // CHECK 2: Is there a 1-character typo in the squashed strings?
+            // (This catches "jinting" vs "jingting")
+            if (levenshteinDistance(cleanT, cleanTyped) <= 1) return true;
+
+            // CHECK 3: Check if the typo exists within a subset of the name
+            // (e.g., is "jinting" close to "jingting" even if "Sin" is there?)
+            let parts = lowerT.split(" ");
+            let squashedParts = [];
+            // Create combinations like ["sin", "jing", "ting", "sinjing", "jingting"]
+            for(let i=0; i<parts.length; i++) {
+                let combo = "";
+                for(let j=i; j<parts.length; j++) {
+                    combo += parts[j];
+                    if (levenshteinDistance(combo, cleanTyped) <= 1) return true;
+                }
+            }
             
             return false;
         }).slice(0, 5);
@@ -184,6 +198,7 @@
             });
         }
     }
+
 
     function levenshteinDistance(a, b) {
         const matrix = Array.from({ length: b.length + 1 }, (_, i) => [i]);
