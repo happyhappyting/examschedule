@@ -267,6 +267,16 @@ thead .sticky-column{
     border:1px solid #9ed39e;
 }
 
+.warning{
+    display:none;
+    margin-top:15px;
+    padding:12px;
+    border-radius:6px;
+    background:#fff8db;
+    color:#755800;
+    border:1px solid #ecd27d;
+}
+
 @media print{
 
 body{
@@ -380,6 +390,39 @@ td{
     line-height:1.4;
 }
 
+.duty-stage{
+    display:inline-block;
+    min-width:58px;
+    padding:4px 8px;
+    border-radius:12px;
+    font-size:12px;
+    font-weight:bold;
+}
+
+.duty-stage.start{
+    background:#dff4ff;
+    color:#005b87;
+    border:1px solid #8fd4f2;
+}
+
+.duty-stage.end{
+    background:#ffe5e5;
+    color:#9a1515;
+    border:1px solid #efaaaa;
+}
+
+.duty-stage.start-end{
+    background:#efe4ff;
+    color:#5e2697;
+    border:1px solid #c5a3e9;
+}
+
+.duty-stage.middle{
+    background:#f1f1f1;
+    color:#666;
+    border:1px solid #d5d5d5;
+}
+
 </style>
 
 </head>
@@ -456,6 +499,8 @@ Print
 
 <div class="validation" id="validationBox"></div>
 
+<div class="warning" id="warningBox"></div>
+
 </div>
 
 <div class="info-bar">
@@ -490,908 +535,841 @@ Loading...
    CONFIG
 =========================================================== */
 
-const CONFIG = {
-
+const CONFIG={
     daysFile:"days.json",
-
-    teacherKeyword:"teacher",
-
-    lessonCode:"L",
-
-    ignoreLesson:true
-
+    teacherKeyword:"teacher"
 };
 
 /* ===========================================================
    GLOBAL DATA
 =========================================================== */
 
-let rawCSV = [];
+let rawCSV=[];
+let currentCSV="";
+let teacherRow=-1;
+let headerRow=-1;
+let officialSessionRow=-1;
+let detailedSessionRow=-1;
 
-let teacherIndex = {};
+let teacherNames=[];
+let teacherLookup=Object.create(null);
+let teacherSchedules=Object.create(null);
 
-let teacherSchedules = {};
+let examHeader=[];
+let examSections=[];
+let examPapers=[];
 
-let teacherNames = [];
-
-let examSchedule = [];
-
-let timeSlots = [];
-
-let currentCSV = "";
-
-let teacherRow = -1;
-
-let headerRow = -1;
-
-let teacherStartRow = -1;
-
-let timeColumns = [];
-
-let examHeader = [];
-
-let examSections = [];
-
-let examPapers = [];
-
-let dutyDetailsIndex = Object.create(null);
-
-let dutyVenueIndex = Object.create(null);
+let detailedVenueRows=0;
+let dutySegments=0;
+let dataWarnings=[];
 
 /* ===========================================================
-   INITIALIZATION
+   INITIALIZATION AND EVENTS
 =========================================================== */
 
-window.addEventListener("load", initialise);
+window.addEventListener("load",initialise);
 
 async function initialise(){
-
     registerEvents();
-
     await loadDays();
-
 }
-
-/* ===========================================================
-   EVENTS
-=========================================================== */
 
 function registerEvents(){
+    document.getElementById("btnSearch")
+        .addEventListener("click",()=>searchTeacher());
 
-    document
-        .getElementById("btnSearch")
-        .addEventListener("click", ()=>searchTeacher());
+    document.getElementById("btnExam")
+        .addEventListener("click",displayExamSchedule);
 
-    document
-        .getElementById("btnExam")
-        .addEventListener("click", displayExamSchedule);
+    document.getElementById("btnMaster")
+        .addEventListener("click",displayMasterView);
 
-    document
-        .getElementById("btnMaster")
-        .addEventListener("click", displayMasterView);
+    document.getElementById("btnPrint")
+        .addEventListener("click",()=>window.print());
 
-    document
-        .getElementById("btnPrint")
-        .addEventListener("click", ()=>window.print());
-
-    document
-        .getElementById("teacherInput")
-        .addEventListener("keypress",e=>{
-
-            if(e.key==="Enter"){
+    document.getElementById("teacherInput")
+        .addEventListener("keypress",event=>{
+            if(event.key==="Enter"){
                 searchTeacher();
             }
-
         });
 
-    document
-        .getElementById("daySelect")
+    document.getElementById("daySelect")
         .addEventListener("change",changeDay);
-
 }
 
 /* ===========================================================
-   LOAD DAYS.JSON
+   FILE LOADING
 =========================================================== */
 
 async function loadDays(){
-
     try{
-
-        const response = await fetch(CONFIG.daysFile);
+        const response=await fetch(CONFIG.daysFile);
 
         if(!response.ok){
-
             throw new Error("Unable to load days.json");
-
         }
 
-        const days = await response.json();
-
-        const select = document.getElementById("daySelect");
-
+        const days=await response.json();
+        const select=document.getElementById("daySelect");
         select.innerHTML="";
 
         days.forEach(day=>{
-
             const option=document.createElement("option");
-
             option.value=day;
-
             option.textContent=day;
-
             select.appendChild(option);
-
         });
 
-        if(days.length>0){
-
+        if(days.length){
             await loadCSV(days[0]);
-
         }
-
     }
-
     catch(error){
-
         showValidation(error.message);
-
     }
-
 }
-
-/* ===========================================================
-   CHANGE DAY
-=========================================================== */
 
 async function changeDay(){
-
     const selected=document.getElementById("daySelect").value;
-
     await loadCSV(selected);
-
 }
 
-/* ===========================================================
-   LOAD CSV
-=========================================================== */
-
 async function loadCSV(day){
-
     resetData();
-
-    currentCSV = encodeURIComponent(day) + ".csv";
-
-    document.getElementById("status").textContent="Loading "+currentCSV+"...";
+    currentCSV=encodeURIComponent(day)+".csv";
+    document.getElementById("status").textContent="Loading...";
 
     try{
-
         const response=await fetch(currentCSV);
 
         if(!response.ok){
-
             throw new Error("Unable to load "+currentCSV);
-
         }
 
         updateLastModified(response);
 
         const csvText=await response.text();
+        const parsed=Papa.parse(csvText,{skipEmptyLines:false});
 
-        const parsed=Papa.parse(csvText,{
-            skipEmptyLines:false
-        });
+        if(parsed.errors && parsed.errors.length){
+            throw new Error("CSV parsing error: "+parsed.errors[0].message);
+        }
 
         rawCSV=parsed.data;
 
-        validateCSV();
+        locateSections();
+        buildCanonicalTeacherDirectory();
+        parseExamSchedule();
+        parseExamPaperIndex();
+        buildSchedulesFromDetailedTable();
+        finaliseTeacherDirectory();
 
-        parseTeacherSection();
-
-parseExamSection();
-
-parseExamPaperIndex();
-
-parseDetailedDutySection();
-
-buildTeacherSchedules();
-        
         showSuccess(
             teacherNames.length+
             " teachers indexed • "+
-            timeSlots.length+
-            " time slots loaded"
+            dutySegments+
+            " duties loaded • "+
+            detailedVenueRows+
+            " venue/class groups"
         );
 
-        document.getElementById("status").textContent=currentCSV+" loaded.";
+        if(dataWarnings.length){
+            showWarning(dataWarnings.join(" | "));
+        }
 
-        clearTable();
-
+        document.getElementById("status").textContent="";
         document.getElementById("resultTitle").textContent="";
-
+        clearTable();
     }
-
     catch(error){
-
+        document.getElementById("status").textContent="";
         showValidation(error.message);
-
     }
-
 }
 
-/* ===========================================================
-   LAST MODIFIED
-=========================================================== */
-
 function updateLastModified(response){
-
     const last=response.headers.get("Last-Modified");
 
     if(!last){
-
         document.getElementById("lastUpdated").textContent=
-        "Last Updated : Unknown";
-
+            "Last Updated : Unknown";
         return;
-
     }
 
-    const d=new Date(last);
-
+    const date=new Date(last);
     document.getElementById("lastUpdated").textContent=
-        "Last Updated : "+
-        d.toLocaleString("en-SG",{
+        "Last Updated : "+date.toLocaleString("en-SG",{
             day:"2-digit",
             month:"short",
             year:"numeric",
             hour:"2-digit",
             minute:"2-digit"
         });
-
 }
-
-/* ===========================================================
-   RESET
-=========================================================== */
 
 function resetData(){
-
     rawCSV=[];
-
-    teacherIndex = Object.create(null);;
-
-    teacherSchedules={};
+    teacherRow=-1;
+    headerRow=-1;
+    officialSessionRow=-1;
+    detailedSessionRow=-1;
 
     teacherNames=[];
-
-    examSchedule=[];
-
-    examSections=[];
-
-    examPapers=[];
-
-dutyDetailsIndex=Object.create(null);
-
-dutyVenueIndex=Object.create(null);
-
-    timeSlots=[];
-
-    teacherRow=-1;
-
-    headerRow=-1;
-
-    teacherStartRow=-1;
+    teacherLookup=Object.create(null);
+    teacherSchedules=Object.create(null);
 
     examHeader=[];
+    examSections=[];
+    examPapers=[];
 
-    timeColumns=[];
+    detailedVenueRows=0;
+    dutySegments=0;
+    dataWarnings=[];
 
     hideValidation();
-
+    hideWarning();
     hideSuccess();
-
 }
 
 /* ===========================================================
-   VALIDATION
+   SECTION LOCATION
 =========================================================== */
 
-function validateCSV(){
-
+function locateSections(){
     teacherRow=findTeacherRow();
+    headerRow=teacherRow>0 ? teacherRow-1 : -1;
+    officialSessionRow=findOfficialSessionRow();
+    detailedSessionRow=findDetailedSessionRow();
 
-    if(teacherRow===-1){
-
-        throw new Error(
-            'Unable to locate the "Teacher" row.'
-        );
-
+    if(officialSessionRow===-1){
+        throw new Error("Unable to locate the official Session table.");
     }
 
-    headerRow=teacherRow-1;
-
-    teacherStartRow=teacherRow+1;
-
+    if(detailedSessionRow===-1){
+        throw new Error("Unable to locate the detailed Session duty table.");
+    }
 }
-
-/* ===========================================================
-   FIND TEACHER ROW
-=========================================================== */
 
 function findTeacherRow(){
-
-    for(let r=0;r<rawCSV.length;r++){
-
-        const firstCell=(rawCSV[r][0]||"")
-            .toString()
-            .trim()
-            .toLowerCase();
-
- if(firstCell.trim().toLowerCase().startsWith(CONFIG.teacherKeyword)){
-
-            return r;
-
+    for(let row=0;row<rawCSV.length;row++){
+        const first=cleanCSVCell(rawCSV[row][0]).toLowerCase();
+        if(first.startsWith(CONFIG.teacherKeyword)){
+            return row;
         }
-
     }
-
     return -1;
-
 }
 
-/* ===========================================================
-   MESSAGE BOXES
-=========================================================== */
-
-function showValidation(message){
-
-    const box=document.getElementById("validationBox");
-
-    box.style.display="block";
-
-    box.textContent=message;
-
+function rowContainsSession(row){
+    return (row||[]).some(cell=>
+        cleanCSVCell(cell).toUpperCase().startsWith("SESSION")
+    );
 }
 
-function hideValidation(){
+function findOfficialSessionRow(){
+    const limit=teacherRow===-1 ? rawCSV.length : teacherRow;
 
-    document.getElementById("validationBox").style.display="none";
-
-}
-
-function showSuccess(message){
-
-    const box=document.getElementById("successBox");
-
-    box.style.display="block";
-
-    box.textContent=message;
-
-}
-
-function hideSuccess(){
-
-    document.getElementById("successBox").style.display="none";
-
-}
-
-/* ===========================================================
-   TABLE HELPERS
-=========================================================== */
-
-function clearTable(){
-
-    document.getElementById("tableHead").innerHTML="";
-
-    document.getElementById("tableBody").innerHTML="";
-
-    document.getElementById("suggestionBox").style.display="none";
-
-}
-
-/* ===========================================================
-   PARSE TEACHER SECTION
-=========================================================== */
-
-function parseTeacherSection(){
-
-    buildTimeSlots();
-
-    buildTeacherIndex();
-
-}
-
-/* ===========================================================
-   BUILD TIME SLOTS
-=========================================================== */
-
-function buildTimeSlots(){
-
-    timeSlots=[];
-    timeColumns=[];
-
-    for(let c=1;c<rawCSV[teacherRow].length;c++){
-
-        const endTime=(rawCSV[teacherRow][c]||"")
-            .toString()
-            .trim();
-
-        if(endTime===""){
-
-            break;
-
+    for(let row=0;row<limit-1;row++){
+        if(!rowContainsSession(rawCSV[row])){
+            continue;
         }
 
-        const startTime=(rawCSV[headerRow][c]||"")
-            .toString()
-            .trim();
+        const headers=(rawCSV[row+1]||[])
+            .map(cell=>cleanCSVCell(cell).toUpperCase());
 
-        timeColumns.push(c);
-
-        timeSlots.push({
-
-            column:c,
-
-            start:startTime,
-
-            end:endTime
-
-        });
-
+        if(headers.includes("TIME") && headers.includes("SUBJECT")){
+            return row;
+        }
     }
+    return -1;
+}
 
+function findDetailedSessionRow(){
+    const limit=teacherRow===-1 ? rawCSV.length : teacherRow;
+
+    for(let row=0;row<limit-3;row++){
+        if(!rowContainsSession(rawCSV[row])){
+            continue;
+        }
+
+        const starts=rawCSV[row+2]||[];
+        const ends=rawCSV[row+3]||[];
+        const width=Math.max(starts.length,ends.length);
+        let pairs=0;
+
+        for(let column=0;column<width;column++){
+            if(isClock(starts[column]) && isClock(ends[column])){
+                pairs++;
+            }
+        }
+
+        if(pairs>=2){
+            return row;
+        }
+    }
+    return -1;
 }
 
 /* ===========================================================
-   BUILD TEACHER INDEX
+   CANONICAL TEACHER DIRECTORY
+   Only the first column of the bottom table is used.
 =========================================================== */
 
-function buildTeacherIndex(){
-
-    teacherIndex = Object.create(null);;
-
-    teacherNames=[];
-
-    for(let r=teacherStartRow;r<rawCSV.length;r++){
-
-        const teacher=(rawCSV[r][0]||"")
-            .toString()
-            .trim();
-
-if(teacher===""){
-
-    continue;
-
-}
-
-        teacherIndex[normalise(teacher)]=r;
-
-        teacherNames.push(teacher);
-
+function buildCanonicalTeacherDirectory(){
+    if(teacherRow===-1){
+        return;
     }
 
+    for(let row=teacherRow+1;row<rawCSV.length;row++){
+        const rawName=cleanCSVCell(rawCSV[row][0]);
+
+        if(!rawName){
+            break;
+        }
+
+        addCanonicalTeacher(cleanTeacherDisplayName(rawName));
+    }
 }
 
-/* ===========================================================
-   BUILD TEACHER SCHEDULES
-=========================================================== */
+function addCanonicalTeacher(name){
+    const display=cleanTeacherDisplayName(name);
+    const key=personKey(display);
 
-function buildTeacherSchedules(){
+    if(!display || !key){
+        return "";
+    }
 
-    teacherSchedules={};
+    if(!teacherLookup[key]){
+        teacherLookup[key]=display;
+        teacherNames.push(display);
+        teacherSchedules[display]=[];
+    }
 
+    return teacherLookup[key];
+}
+
+function resolveDetailedTeacher(value){
+    const cell=cleanCSVCell(value);
+
+    if(!cell){
+        return "";
+    }
+
+    const target=personKey(cell);
+    const candidates=teacherNames
+        .filter(name=>target.startsWith(personKey(name)))
+        .sort((a,b)=>personKey(b).length-personKey(a).length);
+
+    if(candidates.length){
+        return candidates[0];
+    }
+
+    let cleaned=cell
+        .replace(/\s*[\-(（(]?\s*END\s+(?:AA\s+)?PAPER.*$/i,"")
+        .replace(/\s*[\-(（(]?\s*END\s+AA.*$/i,"")
+        .replace(/\s*\*+\s*$/,"")
+        .trim();
+
+    return addCanonicalTeacher(cleaned);
+}
+
+function cleanTeacherDisplayName(value){
+    return cleanCSVCell(value)
+        .replace(/\s*\*+\s*$/,"")
+        .trim();
+}
+
+function finaliseTeacherDirectory(){
+    teacherNames.sort((a,b)=>a.localeCompare(b,"en",{sensitivity:"base"}));
     teacherNames.forEach(name=>{
+        teacherSchedules[name]=(teacherSchedules[name]||[])
+            .sort((a,b)=>
+                a.startMinutes-b.startMinutes ||
+                a.venue.localeCompare(b.venue)
+            );
+    });
+}
 
-        const row=teacherIndex[normalise(name)];
+/* ===========================================================
+   OFFICIAL EXAM SCHEDULE DISPLAY
+=========================================================== */
 
-        const duties=[];
+function parseExamSchedule(){
+    examHeader=[];
+    examSections=[];
 
-        timeSlots.forEach(slot=>{
+    const bands=getSessionBands(rawCSV[officialSessionRow]||[]);
+    const headerCells=rawCSV[officialSessionRow+1]||[];
 
-            const value=(rawCSV[row][slot.column]||"")
-                .toString()
-                .trim();
+    bands.forEach((band,index)=>{
+        const columnMap=buildUniqueHeaderMap(headerCells,band);
 
-            if(value===""){
+        if(index===0){
+            examHeader=["Course",...columnMap.map(item=>item.header)];
+        }
 
-                return;
+        const records=[];
+        let started=false;
 
+        for(let row=officialSessionRow+2;row<rawCSV.length;row++){
+            const source=rawCSV[row]||[];
+            const hasData=columnMap.some(item=>
+                cleanCSVCell(source[item.column])!==""
+            );
+
+            if(!hasData){
+                if(started){
+                    break;
+                }
+                continue;
             }
 
-            if(value.toUpperCase()===CONFIG.lessonCode){
+            started=true;
+            const record={Course:cleanCSVCell(source[0])};
 
-                return;
+            columnMap.forEach(item=>{
+                record[item.header]=cleanCSVCell(source[item.column]);
+            });
 
+            records.push(record);
+        }
+
+        examSections.push({title:band.title,rows:records});
+    });
+}
+
+function buildUniqueHeaderMap(headerCells,band){
+    const output=[];
+    const seen=new Set();
+
+    for(let column=band.start;column<=band.end;column++){
+        const header=cleanCSVCell(headerCells[column]);
+
+        if(!header || seen.has(header.toUpperCase())){
+            continue;
+        }
+
+        seen.add(header.toUpperCase());
+        output.push({header:header,column:column});
+    }
+
+    return output;
+}
+
+/* ===========================================================
+   OFFICIAL PAPER INDEX
+=========================================================== */
+
+function parseExamPaperIndex(){
+    examPapers=[];
+
+    const bands=getSessionBands(rawCSV[officialSessionRow]||[]);
+    const headerCells=rawCSV[officialSessionRow+1]||[];
+
+    bands.forEach(band=>{
+        const headerMap=Object.create(null);
+
+        for(let column=band.start;column<=band.end;column++){
+            const header=cleanCSVCell(headerCells[column]).toUpperCase();
+            if(header && headerMap[header]===undefined){
+                headerMap[header]=column;
+            }
+        }
+
+        let started=false;
+
+        for(let row=officialSessionRow+2;row<rawCSV.length;row++){
+            const source=rawCSV[row]||[];
+            const hasData=source.slice(band.start,band.end+1)
+                .some(cell=>cleanCSVCell(cell)!=="");
+
+            if(!hasData){
+                if(started){
+                    break;
+                }
+                continue;
             }
 
-const detail=findDutyDetail(
+            started=true;
 
-    name,
+            const timeText=cleanCSVCell(source[headerMap["TIME"]]);
+            const times=timeText.match(/\d{1,2}:\d{2}/g)||[];
+            const subject=cleanCSVCell(source[headerMap["SUBJECT"]]);
 
-    slot.start,
+            if(times.length<2 || !subject || subject.toUpperCase()==="NO PAPER"){
+                continue;
+            }
 
-    slot.end
+            const examVenue=cleanCSVCell(source[headerMap["EXAM VENUE"]]);
+            const aaRoom=cleanCSVCell(source[headerMap["AA ROOM"]]);
+            const aaEndText=cleanCSVCell(source[headerMap["END TIME (AA ROOM)"]]);
+            const aaTimes=aaEndText.match(/\d{1,2}:\d{2}/g)||[];
+            const end=timeToMinutes(times[1]);
 
-);
+            examPapers.push({
+                session:normaliseSession(band.title),
+                course:cleanCSVCell(source[0]),
+                subject:subject,
+                examVenue:examVenue,
+                aaRoom:aaRoom,
+                start:timeToMinutes(times[0]),
+                end:end,
+                aaEnd:aaTimes.length
+                    ? timeToMinutes(aaTimes[aaTimes.length-1])
+                    : end,
+                classCodes:extractClassCodes(examVenue),
+                roomCodes:extractRoomCodes(examVenue),
+                aaRoomCodes:extractRoomCodes(aaRoom)
+            });
+        }
+    });
+}
 
-duties.push({
+/* ===========================================================
+   AUTHORITATIVE DETAILED DUTY TABLE
+=========================================================== */
 
-    start:slot.start,
+function buildSchedulesFromDetailedTable(){
+    const bands=getSessionBands(rawCSV[detailedSessionRow]||[]);
+    const startRow=rawCSV[detailedSessionRow+2]||[];
+    const endRow=rawCSV[detailedSessionRow+3]||[];
+    const detailEnd=findDetailedTableEnd(bands);
 
-    end:slot.end,
+    bands.forEach(band=>{
+        const timeColumns=[];
 
-    venue:value,
+        for(let column=band.start;column<=band.end;column++){
+            if(isClock(startRow[column]) && isClock(endRow[column])){
+                timeColumns.push(column);
+            }
+        }
 
-    detailedVenue:detail
-        ? detail.venue
-        : value,
+        if(!timeColumns.length){
+            return;
+        }
 
-    subject:detail
-        ? detail.subject
-        : "Paper not identified",
+        const venueColumn=timeColumns[0]-1;
 
-    hasDetail:Boolean(detail),
+        for(let row=detailedSessionRow+4;row<detailEnd;row++){
+            const source=rawCSV[row]||[];
+            const venue=cleanCSVCell(source[venueColumn]);
 
-    nextInvigilator:"",
+            if(!venue){
+                continue;
+            }
 
-    column:slot.column
+            const occupied=timeColumns.filter(column=>
+                cleanCSVCell(source[column])!==""
+            );
 
-});
+            if(!occupied.length){
+                continue;
+            }
 
-        });
+            detailedVenueRows++;
 
-        teacherSchedules[name]=mergeConsecutiveDuties(duties);
+            const rowStart=timeToMinutes(startRow[occupied[0]]);
+            const rowEnd=timeToMinutes(endRow[occupied[occupied.length-1]]);
+            const papers=matchPapersToVenueRow(
+                band.title,
+                venue,
+                rowStart,
+                rowEnd
+            );
 
+            const cells=occupied.map((column,index)=>({
+                teacher:resolveDetailedTeacher(source[column]),
+                start:cleanCSVCell(startRow[column]),
+                end:cleanCSVCell(endRow[column]),
+                startMinutes:timeToMinutes(startRow[column]),
+                endMinutes:timeToMinutes(endRow[column]),
+                subject:subjectForDutySlot(
+                    papers,
+                    venue,
+                    timeToMinutes(startRow[column]),
+                    timeToMinutes(endRow[column])
+                ),
+                isStart:index===0,
+                isEnd:index===occupied.length-1
+            }));
+
+            addDutySegmentsForVenueRow(cells,venue);
+        }
+    });
+}
+
+function findDetailedTableEnd(bands){
+    const start=detailedSessionRow+4;
+    const lower=Math.min(...bands.map(band=>band.start));
+    const upper=Math.max(...bands.map(band=>band.end));
+    let blankRows=0;
+
+    for(let row=start;row<rawCSV.length;row++){
+        const hasData=(rawCSV[row]||[])
+            .slice(lower,upper+1)
+            .some(cell=>cleanCSVCell(cell)!=="");
+
+        blankRows=hasData ? 0 : blankRows+1;
+
+        if(blankRows>=2){
+            return row-1;
+        }
+
+        if(teacherRow!==-1 && row>=teacherRow-2){
+            return teacherRow-2;
+        }
+    }
+
+    return teacherRow!==-1 ? teacherRow-2 : rawCSV.length;
+}
+
+function matchPapersToVenueRow(session,venue,rowStart,rowEnd){
+    const sessionKey=normaliseSession(session);
+    const classCodes=extractClassCodes(venue);
+    const roomCodes=extractRoomCodes(venue);
+
+    let candidates=examPapers.filter(paper=>{
+        if(paper.session!==sessionKey){
+            return false;
+        }
+
+        const classMatch=classCodes.some(code=>paper.classCodes.includes(code));
+        const aaMatch=roomCodes.some(room=>paper.aaRoomCodes.includes(room));
+        return classMatch || aaMatch;
     });
 
-    attachNextInvigilators();
+    if(!candidates.length){
+        candidates=examPapers.filter(paper=>
+            paper.session===sessionKey &&
+            rowStart<paperDutyEnd(paper,roomCodes) &&
+            rowEnd>paper.start
+        );
 
-}
-
-/* ===========================================================
-   MERGE CONSECUTIVE DUTIES
-=========================================================== */
-
-function mergeConsecutiveDuties(duties){
-
-    if(duties.length===0){
-
-        return [];
-
+        if(candidates.length===1){
+            addDataWarning(
+                session+" / "+venue+
+                " was matched by time because its class group was missing from Exam Venue."
+            );
+        }
     }
 
-    const merged=[];
-
-    let current={...duties[0]};
-
-    for(let i=1;i<duties.length;i++){
-
-        const next=duties[i];
-
-if(
-
-    current.venue===next.venue &&
-
-    current.detailedVenue===
-    next.detailedVenue &&
-
-    current.subject===
-    next.subject
-
-){
-
-    current.end=next.end;
-
-    current.column=next.column;
-
+    return candidates;
 }
 
-        else{
+function subjectForDutySlot(papers,venue,slotStart,slotEnd){
+    if(!papers.length){
+        return "Schedule mismatch – check CSV";
+    }
 
-            merged.push(current);
+    const roomCodes=extractRoomCodes(venue);
+    let selected=papers;
 
-            current={...next};
+    if(papers.length>1){
+        const overlapping=papers.filter(paper=>
+            slotStart<paperDutyEnd(paper,roomCodes) &&
+            slotEnd>paper.start
+        );
 
+        if(overlapping.length){
+            selected=overlapping;
+        }
+    }
+
+    const subjects=selected.map(paper=>
+        specialiseLanguageSubject(paper.subject,venue)
+    );
+
+    return [...new Set(subjects)].join(" / ");
+}
+
+function paperDutyEnd(paper,venueRooms){
+    const isAA=venueRooms.some(room=>paper.aaRoomCodes.includes(room));
+    return isAA ? paper.aaEnd : paper.end;
+}
+
+function specialiseLanguageSubject(subject,venue){
+    const codes=extractClassCodes(venue);
+    const languages=[];
+
+    if(codes.some(code=>/^4CL/.test(code))){
+        languages.push("CHINESE");
+    }
+    if(codes.some(code=>/^4ML/.test(code))){
+        languages.push("MALAY");
+    }
+    if(codes.some(code=>/^4TL/.test(code))){
+        languages.push("TAMIL");
+    }
+
+    if(!languages.length){
+        return subject;
+    }
+
+    const selected=[];
+
+    languages.forEach(language=>{
+        const expression=new RegExp(
+            "((?:BASIC\\s+)?"+
+            language+
+            "(?:\\s+LANGUAGE)?\\s+PAPER\\s+\\d+)",
+            "i"
+        );
+        const match=subject.match(expression);
+        if(match){
+            selected.push(match[1]);
+        }
+    });
+
+    if(!selected.length){
+        return subject;
+    }
+
+    const notes=subject.match(/\([^)]*\)/g)||[];
+    return selected.join(" / ")+(notes.length ? " "+notes.join(" ") : "");
+}
+
+function addDutySegmentsForVenueRow(cells,venue){
+    if(!cells.length){
+        return;
+    }
+
+    let current=createSegment(cells[0],venue);
+
+    for(let index=1;index<cells.length;index++){
+        const cell=cells[index];
+        const continuous=current.endMinutes===cell.startMinutes;
+
+        if(
+            continuous &&
+            current.teacher===cell.teacher &&
+            current.subject===cell.subject
+        ){
+            current.end=cell.end;
+            current.endMinutes=cell.endMinutes;
+            current.isEnd=current.isEnd || cell.isEnd;
+            continue;
         }
 
+        current.nextInvigilator=
+            current.teacher===cell.teacher ? "Continues" : cell.teacher;
+        saveDutySegment(current);
+        current=createSegment(cell,venue);
     }
 
-    merged.push(current);
+    current.nextInvigilator="-";
+    saveDutySegment(current);
+}
 
-    return merged;
+function createSegment(cell,venue){
+    return {
+        teacher:cell.teacher,
+        start:cell.start,
+        end:cell.end,
+        startMinutes:cell.startMinutes,
+        endMinutes:cell.endMinutes,
+        subject:cell.subject,
+        venue:venue,
+        isStart:cell.isStart,
+        isEnd:cell.isEnd,
+        nextInvigilator:"-"
+    };
+}
 
+function saveDutySegment(segment){
+    if(!segment.teacher){
+        return;
+    }
+
+    if(!teacherSchedules[segment.teacher]){
+        addCanonicalTeacher(segment.teacher);
+    }
+
+    teacherSchedules[segment.teacher].push(segment);
+    dutySegments++;
 }
 
 /* ===========================================================
-   FIND NEXT INVIGILATORS
-=========================================================== */
-
-function attachNextInvigilators(){
-
-    Object.keys(teacherSchedules)
-        .forEach(name=>{
-
-            teacherSchedules[name]
-                .forEach(duty=>{
-
-                    if(duty.hasDetail){
-
-                        duty.nextInvigilator=
-                            findDetailedNextInvigilator(
-
-                                duty.detailedVenue,
-
-                                duty.end,
-
-                                name
-
-                            );
-
-                    }
-
-                    else{
-
-                        duty.nextInvigilator=
-                            findNextInvigilator(
-
-                                duty.venue,
-
-                                duty.column
-
-                            );
-
-                    }
-
-                });
-
-        });
-
-}
-
-/* ===========================================================
-   NEXT INVIGILATOR
-=========================================================== */
-
-function findNextInvigilator(venue,lastColumn){
-
-    const nextColumn=lastColumn+1;
-
-    if(!timeColumns.includes(nextColumn)){
-
-        return "-";
-
-    }
-
-    for(const teacher of teacherNames){
-
-        const row=teacherIndex[normalise(teacher)];
-
-        const value=(rawCSV[row][nextColumn]||"")
-            .toString()
-            .trim();
-
-        if(value===venue){
-
-            return teacher;
-
-        }
-
-    }
-
-    return "-";
-
-}
-
-/* ===========================================================
-   SEARCH
+   SEARCH AND SUGGESTIONS
 =========================================================== */
 
 function searchTeacher(selectedName=null){
-
     clearTable();
 
-    let name;
+    const input=document.getElementById("teacherInput");
+    const name=selectedName || input.value.trim();
 
-    if(selectedName){
-
-        name=selectedName;
-
-        document.getElementById("teacherInput").value=name;
-
-    }
-
-    else{
-
-        name=document
-            .getElementById("teacherInput")
-            .value
-            .trim();
-
-    }
-
-    if(name===""){
-
+    if(!name){
         return;
-
     }
 
     const teacher=findExactTeacher(name);
 
     if(!teacher){
-
         showSuggestions(name);
-
         document.getElementById("resultTitle").textContent=
-        "No exact match found.";
-
+            "No exact match found.";
         return;
-
     }
 
+    input.value=teacher;
     displayTeacherSchedule(teacher);
-
 }
-
-/* ===========================================================
-   FIND EXACT TEACHER
-=========================================================== */
 
 function findExactTeacher(input){
-
-    const target=input
-        .toUpperCase()
-        .replace(/\s+/g,"");
-
-    for(const teacher of teacherNames){
-
-        const clean=teacher
-            .toUpperCase()
-            .replace(/\s+/g,"");
-
-        if(clean===target){
-
-            return teacher;
-
-        }
-
-    }
-
-    return null;
-
+    return teacherLookup[personKey(input)]||null;
 }
 
-/* ===========================================================
-   SUGGESTIONS
-=========================================================== */
-
 function showSuggestions(input){
-
     const box=document.getElementById("suggestionBox");
-
     const links=document.getElementById("suggestionLinks");
-
     links.innerHTML="";
 
-    const typed=input
-        .toLowerCase()
-        .replace(/\s+/g,"");
-
+    const typed=personKey(input);
     const suggestions=teacherNames.filter(name=>{
-
-        const lower=name.toLowerCase();
-
-        const clean=lower.replace(/\s+/g,"");
-
-        if(clean.includes(typed)){
-
-            return true;
-
-        }
-
-        if(levenshtein(clean,typed)<=1){
-
-            return true;
-
-        }
-
-        const parts=lower.split(" ");
-
-        for(let i=0;i<parts.length;i++){
-
-            let combine="";
-
-            for(let j=i;j<parts.length;j++){
-
-                combine+=parts[j];
-
-                if(levenshtein(combine,typed)<=1){
-
-                    return true;
-
-                }
-
-            }
-
-        }
-
-        return false;
-
+        const candidate=personKey(name);
+        return candidate.includes(typed) || levenshtein(candidate,typed)<=1;
     }).slice(0,5);
 
-    if(suggestions.length===0){
-
+    if(!suggestions.length){
+        box.style.display="none";
         return;
-
     }
 
     box.style.display="block";
 
     suggestions.forEach(name=>{
-
         const span=document.createElement("span");
-
         span.className="suggestion";
-
         span.textContent=name;
-
         span.onclick=()=>searchTeacher(name);
-
         links.appendChild(span);
-
     });
-
 }
 
-/* ===========================================================
-   LEVENSHTEIN
-=========================================================== */
-
 function levenshtein(a,b){
-
     const matrix=[];
 
-    for(let i=0;i<=b.length;i++){
-
-        matrix[i]=[i];
-
+    for(let row=0;row<=b.length;row++){
+        matrix[row]=[row];
+    }
+    for(let column=0;column<=a.length;column++){
+        matrix[0][column]=column;
     }
 
-    for(let j=0;j<=a.length;j++){
-
-        matrix[0][j]=j;
-
-    }
-
-    for(let i=1;i<=b.length;i++){
-
-        for(let j=1;j<=a.length;j++){
-
-            if(b.charAt(i-1)===a.charAt(j-1)){
-
-                matrix[i][j]=matrix[i-1][j-1];
-
-            }
-
-            else{
-
-                matrix[i][j]=Math.min(
-
-                    matrix[i-1][j-1]+1,
-
-                    matrix[i][j-1]+1,
-
-                    matrix[i-1][j]+1
-
+    for(let row=1;row<=b.length;row++){
+        for(let column=1;column<=a.length;column++){
+            matrix[row][column]=b.charAt(row-1)===a.charAt(column-1)
+                ? matrix[row-1][column-1]
+                : Math.min(
+                    matrix[row-1][column-1]+1,
+                    matrix[row][column-1]+1,
+                    matrix[row-1][column]+1
                 );
-
-            }
-
         }
-
     }
 
     return matrix[b.length][a.length];
-
 }
 
 /* ===========================================================
@@ -1399,1319 +1377,281 @@ function levenshtein(a,b){
 =========================================================== */
 
 function displayTeacherSchedule(name){
-
-    const head=document.getElementById(
-        "tableHead"
-    );
-
-    const body=document.getElementById(
-        "tableBody"
-    );
-
+    const head=document.getElementById("tableHead");
+    const body=document.getElementById("tableBody");
     const duties=teacherSchedules[name]||[];
 
-    document.getElementById(
-        "resultTitle"
-    ).textContent="Results for "+name;
+    document.getElementById("resultTitle").textContent="Results for "+name;
 
-    if(duties.length===0){
-
+    if(!duties.length){
         head.innerHTML="";
-
-        body.innerHTML=`
-            <tr>
-                <td colspan="4">
-                    No invigilation duties found.
-                </td>
-            </tr>
-        `;
-
+        body.innerHTML='<tr><td colspan="5">No invigilation duties found.</td></tr>';
         return;
-
     }
 
     head.innerHTML=`
         <tr>
             <th>Time</th>
+            <th>Duty Stage</th>
             <th>Subject Paper</th>
             <th>Venue / Class</th>
             <th>Next Invigilator</th>
         </tr>
     `;
 
-    body.innerHTML=duties.map(d=>`
+    body.innerHTML=duties.map(duty=>dutyRowHTML(duty,false)).join("");
+}
 
+function dutyRowHTML(duty,includeTeacher){
+    return `
         <tr>
-
-            <td>
-                ${escapeHTML(
-                    formatTimeRange(
-                        d.start,
-                        d.end
-                    )
-                )}
-            </td>
-
-            <td class="subject-cell">
-                ${escapeHTML(d.subject)}
-            </td>
-
-            <td class="venue-cell">
-                ${escapeHTML(
-                    d.detailedVenue
-                )}
-            </td>
-
-            <td>
-                ${escapeHTML(
-                    d.nextInvigilator
-                )}
-            </td>
-
+            ${includeTeacher ? `<td>${escapeHTML(duty.teacher)}</td>` : ""}
+            <td>${escapeHTML(formatTimeRange(duty.start,duty.end))}</td>
+            <td>${dutyStageHTML(duty)}</td>
+            <td class="subject-cell">${escapeHTML(duty.subject)}</td>
+            <td class="venue-cell">${escapeHTML(duty.venue)}</td>
+            <td>${escapeHTML(duty.nextInvigilator)}</td>
         </tr>
-
-    `).join("");
-
+    `;
 }
 
-function parseExamSection(){
-
-    examSchedule=[];
-
-    examSections=[];
-
-    examHeader=[];
-
-    let sessionRow=-1;
-
-    /* Find the first row containing SESSION in any column */
-
-    for(let r=0;r<teacherRow;r++){
-
-        const containsSession=rawCSV[r].some(cell=>
-
-            (cell||"")
-                .toString()
-                .trim()
-                .toUpperCase()
-                .startsWith("SESSION")
-
-        );
-
-        if(containsSession){
-
-            sessionRow=r;
-
-            break;
-
-        }
-
+function dutyStageHTML(duty){
+    if(duty.isStart && duty.isEnd){
+        return '<span class="duty-stage start-end">START &amp; END</span>';
     }
-
-    if(sessionRow===-1){
-
-        return;
-
+    if(duty.isStart){
+        return '<span class="duty-stage start">START</span>';
     }
-
-    const sessionCells=rawCSV[sessionRow];
-
-    const headerCells=rawCSV[sessionRow+1]||[];
-
-    const sessions=[];
-
-    let c=0;
-
-    /* Find each horizontal SESSION section */
-
-    while(c<sessionCells.length){
-
-        const title=(sessionCells[c]||"")
-            .toString()
-            .trim();
-
-        if(!title.toUpperCase().startsWith("SESSION")){
-
-            c++;
-
-            continue;
-
-        }
-
-        const startColumn=c;
-
-        c++;
-
-        while(
-
-            c<sessionCells.length &&
-
-            (sessionCells[c]||"")
-                .toString()
-                .trim()
-                .toUpperCase()===title.toUpperCase()
-
-        ){
-
-            c++;
-
-        }
-
-        sessions.push({
-
-            title:title,
-
-            start:startColumn,
-
-            end:c-1
-
-        });
-
+    if(duty.isEnd){
+        return '<span class="duty-stage end">END</span>';
     }
-
-    if(sessions.length===0){
-
-        return;
-
-    }
-
-    sessions.forEach((session,sessionIndex)=>{
-
-        const columnMap=[];
-
-        const seenHeaders=new Set();
-
-        /* Build the columns and remove duplicated headers */
-
-        for(
-
-            let column=session.start;
-
-            column<=session.end;
-
-            column++
-
-        ){
-
-            const header=(headerCells[column]||"")
-                .toString()
-                .replace(/\s+/g," ")
-                .trim();
-
-            if(header===""){
-
-                continue;
-
-            }
-
-            if(seenHeaders.has(header)){
-
-                continue;
-
-            }
-
-            seenHeaders.add(header);
-
-            columnMap.push({
-
-                header:header,
-
-                column:column
-
-            });
-
-        }
-
-        /* Both sessions use the same display headers */
-
-        if(sessionIndex===0){
-
-            examHeader=[
-
-                "Course",
-
-                ...columnMap.map(item=>item.header)
-
-            ];
-
-        }
-
-        const rows=[];
-
-        /* Read the examination records */
-
-        for(
-
-            let r=sessionRow+2;
-
-            r<teacherRow;
-
-            r++
-
-        ){
-
-            const sourceRow=rawCSV[r]||[];
-
-            const course=(sourceRow[0]||"")
-                .toString()
-                .trim();
-
-            const hasSessionData=columnMap.some(item=>
-
-                (sourceRow[item.column]||"")
-                    .toString()
-                    .trim()!==""
-
-            );
-
-            if(!course && !hasSessionData){
-
-                if(rows.length>0){
-
-                    break;
-
-                }
-
-                continue;
-
-            }
-
-            if(!hasSessionData){
-
-                continue;
-
-            }
-
-            const record={};
-
-            record["Course"]=course;
-
-            columnMap.forEach(item=>{
-
-                record[item.header]=
-                    (sourceRow[item.column]||"")
-                        .toString()
-                        .trim();
-
-            });
-
-            rows.push(record);
-
-        }
-
-        examSections.push({
-
-            title:session.title,
-
-            rows:rows
-
-        });
-
-    });
-
+    return '<span class="duty-stage middle">—</span>';
 }
 
 /* ===========================================================
-   DISPLAY EXAM SCHEDULE
+   DISPLAY OFFICIAL EXAM SCHEDULE
 =========================================================== */
 
-/* ===========================================================
-   EXAM PAPER AND DETAILED DUTY INDEX
-=========================================================== */
-
-function cleanCSVCell(value){
-
-    return String(value||"")
-        .replace(/\s+/g," ")
-        .trim();
-
-}
-
-function getSessionBands(row){
-
-    const bands=[];
-
-    let column=0;
-
-    while(column<row.length){
-
-        const title=cleanCSVCell(row[column]);
-
-        if(!title.toUpperCase().startsWith("SESSION")){
-
-            column++;
-
-            continue;
-
-        }
-
-        const start=column;
-
-        column++;
-
-        while(
-
-            column<row.length &&
-
-            cleanCSVCell(row[column]).toUpperCase()===
-            title.toUpperCase()
-
-        ){
-
-            column++;
-
-        }
-
-        bands.push({
-
-            title:title,
-
-            start:start,
-
-            end:column-1
-
-        });
-
-    }
-
-    return bands;
-
-}
-
-function timeToMinutes(value){
-
-    const match=String(value||"")
-        .match(/(\d{1,2}):(\d{2})/);
-
-    if(!match){
-
-        return -1;
-
-    }
-
-    return Number(match[1])*60+Number(match[2]);
-
-}
-
-function extractClassCodes(value){
-
-    return [
-
-        ...new Set(
-
-            String(value||"")
-                .toUpperCase()
-                .match(/\b4[A-Z]{2,4}\b/g)||[]
-
-        )
-
-    ];
-
-}
-
-function extractRoomCode(value){
-
-    const match=String(value||"")
-        .toUpperCase()
-        .match(/\b[A-Z]\d{3}\b/);
-
-    return match ? match[0] : "";
-
-}
-
-/* Read the official examination papers */
-
-function parseExamPaperIndex(){
-
-    examPapers=[];
-
-    let sessionRow=-1;
-
-    for(let r=0;r<teacherRow;r++){
-
-        const hasSession=rawCSV[r].some(cell=>
-
-            cleanCSVCell(cell)
-                .toUpperCase()
-                .startsWith("SESSION")
-
-        );
-
-        if(hasSession){
-
-            sessionRow=r;
-
-            break;
-
-        }
-
-    }
-
-    if(sessionRow===-1){
-
-        return;
-
-    }
-
-    const bands=getSessionBands(rawCSV[sessionRow]);
-
-    bands.forEach(band=>{
-
-        const headerCells=rawCSV[sessionRow+1]||[];
-
-        const headerMap=Object.create(null);
-
-        for(
-
-            let column=band.start;
-
-            column<=band.end;
-
-            column++
-
-        ){
-
-            const header=cleanCSVCell(
-                headerCells[column]
-            ).toUpperCase();
-
-            if(
-
-                header &&
-
-                headerMap[header]===undefined
-
-            ){
-
-                headerMap[header]=column;
-
-            }
-
-        }
-
-        let started=false;
-
-        for(
-
-            let r=sessionRow+2;
-
-            r<teacherRow;
-
-            r++
-
-        ){
-
-            const row=rawCSV[r]||[];
-
-            const hasData=row
-                .slice(band.start,band.end+1)
-                .some(cell=>cleanCSVCell(cell)!=="");
-
-            if(!hasData){
-
-                if(started){
-
-                    break;
-
-                }
-
-                continue;
-
-            }
-
-            started=true;
-
-            const timeText=cleanCSVCell(
-                row[headerMap["TIME"]]
-            );
-
-            const times=String(timeText)
-                .match(/\d{1,2}:\d{2}/g)||[];
-
-            if(times.length<2){
-
-                continue;
-
-            }
-
-            const subject=cleanCSVCell(
-                row[headerMap["SUBJECT"]]
-            );
-
-            const examVenue=cleanCSVCell(
-                row[headerMap["EXAM VENUE"]]
-            );
-
-            const aaRoom=cleanCSVCell(
-                row[headerMap["AA ROOM"]]
-            );
-
-            const aaEndText=cleanCSVCell(
-                row[headerMap["END TIME (AA ROOM)"]]
-            );
-
-            const aaTimes=String(aaEndText)
-                .match(/\d{1,2}:\d{2}/g)||[];
-
-            const end=timeToMinutes(times[1]);
-
-            examPapers.push({
-
-                session:band.title.toUpperCase(),
-
-                course:cleanCSVCell(row[0]),
-
-                subject:subject,
-
-                examVenue:examVenue,
-
-                aaRoom:aaRoom,
-
-                start:timeToMinutes(times[0]),
-
-                end:end,
-
-                aaEnd:aaTimes.length
-                    ? timeToMinutes(
-                        aaTimes[aaTimes.length-1]
-                    )
-                    : end,
-
-                classCodes:
-                    extractClassCodes(examVenue)
-
-            });
-
-        }
-
-    });
-
-}
-
-/* Read teacher names from the detailed duty table */
-
-function parseDetailedDutySection(){
-
-    dutyDetailsIndex=Object.create(null);
-
-    dutyVenueIndex=Object.create(null);
-
-    let detailRow=-1;
-
-    for(let r=0;r<teacherRow-3;r++){
-
-        const hasSession=rawCSV[r].some(cell=>
-
-            cleanCSVCell(cell)
-                .toUpperCase()
-                .startsWith("SESSION")
-
-        );
-
-        if(!hasSession){
-
-            continue;
-
-        }
-
-        const starts=rawCSV[r+2]||[];
-
-        const ends=rawCSV[r+3]||[];
-
-        let clockPairs=0;
-
-        const width=Math.max(
-            starts.length,
-            ends.length
-        );
-
-        for(let c=0;c<width;c++){
-
-            const startIsTime=
-                /^\d{1,2}:\d{2}$/.test(
-                    cleanCSVCell(starts[c])
-                );
-
-            const endIsTime=
-                /^\d{1,2}:\d{2}$/.test(
-                    cleanCSVCell(ends[c])
-                );
-
-            if(startIsTime && endIsTime){
-
-                clockPairs++;
-
-            }
-
-        }
-
-        if(clockPairs>=2){
-
-            detailRow=r;
-
-            break;
-
-        }
-
-    }
-
-    if(detailRow===-1){
-
-        return;
-
-    }
-
-    const bands=getSessionBands(
-        rawCSV[detailRow]
-    );
-
-    const startRow=rawCSV[detailRow+2]||[];
-
-    const endRow=rawCSV[detailRow+3]||[];
-
-    const detailEnd=Math.max(
-        detailRow+4,
-        teacherRow-2
-    );
-
-    bands.forEach(band=>{
-
-        const timeColumns=[];
-
-        for(
-
-            let column=band.start;
-
-            column<=band.end;
-
-            column++
-
-        ){
-
-            const startIsTime=
-                /^\d{1,2}:\d{2}$/.test(
-                    cleanCSVCell(startRow[column])
-                );
-
-            const endIsTime=
-                /^\d{1,2}:\d{2}$/.test(
-                    cleanCSVCell(endRow[column])
-                );
-
-            if(startIsTime && endIsTime){
-
-                timeColumns.push(column);
-
-            }
-
-        }
-
-        for(
-
-            let r=detailRow+4;
-
-            r<detailEnd;
-
-            r++
-
-        ){
-
-            const row=rawCSV[r]||[];
-
-            const detailedVenue=cleanCSVCell(
-                row[band.start]
-            );
-
-            if(!detailedVenue){
-
-                continue;
-
-            }
-
-            timeColumns.forEach(column=>{
-
-                const teacher=cleanCSVCell(
-                    row[column]
-                );
-
-                if(!teacher){
-
-                    return;
-
-                }
-
-                const start=cleanCSVCell(
-                    startRow[column]
-                );
-
-                const end=cleanCSVCell(
-                    endRow[column]
-                );
-
-                const subject=matchDutySubjects(
-
-                    band.title,
-
-                    detailedVenue,
-
-                    start,
-
-                    end
-
-                );
-
-                const dutyKey=makeDutyDetailKey(
-
-                    teacher,
-
-                    start,
-
-                    end
-
-                );
-
-                dutyDetailsIndex[dutyKey]={
-
-                    venue:detailedVenue,
-
-                    subject:subject
-
-                };
-
-                const venueKey=makeVenueSlotKey(
-
-                    detailedVenue,
-
-                    start
-
-                );
-
-                dutyVenueIndex[venueKey]=teacher;
-
-            });
-
-        }
-
-    });
-
-}
-
-/* Match a detailed duty with its examination paper */
-
-function matchDutySubjects(
-
-    session,
-
-    detailedVenue,
-
-    start,
-
-    end
-
-){
-
-    const venueCodes=
-        extractClassCodes(detailedVenue);
-
-    const venueRoom=
-        extractRoomCode(detailedVenue);
-
-    let candidates=examPapers.filter(paper=>{
-
-        if(
-
-            paper.session!==session.toUpperCase()
-
-        ){
-
-            return false;
-
-        }
-
-        const classMatch=venueCodes.some(code=>
-
-            paper.classCodes.includes(code)
-
-        );
-
-        const aaRoom=
-            extractRoomCode(paper.aaRoom);
-
-        const aaMatch=
-
-            aaRoom!=="" &&
-
-            !paper.aaRoom
-                .toUpperCase()
-                .includes("NO AA") &&
-
-            aaRoom===venueRoom;
-
-        return classMatch||aaMatch;
-
-    });
-
-    /* Use time to separate papers sharing an AA room */
-
-    if(candidates.length>1){
-
-        const slotStart=timeToMinutes(start);
-
-        const slotEnd=timeToMinutes(end);
-
-        const overlapping=candidates.filter(
-            paper=>{
-
-                const aaMatch=
-
-                    extractRoomCode(paper.aaRoom)===
-                    venueRoom &&
-
-                    !paper.aaRoom
-                        .toUpperCase()
-                        .includes("NO AA");
-
-                const paperEnd=aaMatch
-                    ? paper.aaEnd
-                    : paper.end;
-
-                return (
-
-                    slotStart<paperEnd &&
-
-                    slotEnd>paper.start
-
-                );
-
-            }
-        );
-
-        if(overlapping.length){
-
-            candidates=overlapping;
-
-        }
-
-    }
-
-    const subjects=candidates.map(paper=>
-
-        specialiseLanguageSubject(
-
-            paper.subject,
-
-            detailedVenue
-
-        )
-
-    );
-
-    return [
-
-        ...new Set(subjects)
-
-    ].join(" / ")||"Paper not identified";
-
-}
-
-/* Select Chinese, Malay or Tamil from a combined paper */
-
-function specialiseLanguageSubject(
-
-    subject,
-
-    detailedVenue
-
-){
-
-    const languageTypes=new Set();
-
-    extractClassCodes(detailedVenue)
-        .forEach(code=>{
-
-            if(/^4CL/.test(code)){
-
-                languageTypes.add("CHINESE");
-
-            }
-
-            if(/^4ML/.test(code)){
-
-                languageTypes.add("MALAY");
-
-            }
-
-            if(/^4TL/.test(code)){
-
-                languageTypes.add("TAMIL");
-
-            }
-
-        });
-
-    if(languageTypes.size!==1){
-
-        return subject;
-
-    }
-
-    const language=[...languageTypes][0];
-
-    const expression=new RegExp(
-
-        "((?:BASIC\\s+)?"+
-
-        language+
-
-        " LANGUAGE PAPER\\s+\\d+)",
-
-        "i"
-
-    );
-
-    const match=subject.match(expression);
-
-    if(!match){
-
-        return subject;
-
-    }
-
-    const notes=subject.match(
-        /\([^)]*\)/g
-    )||[];
-
-    return [
-
-        match[1],
-
-        ...notes
-
-    ].join(" ");
-
-}
-
-function makeDutyDetailKey(
-
-    teacher,
-
-    start,
-
-    end
-
-){
-
-    return (
-
-        normalise(teacher)+
-
-        "|"+
-
-        timeToMinutes(start)+
-
-        "|"+
-
-        timeToMinutes(end)
-
-    );
-
-}
-
-function makeVenueSlotKey(
-
-    venue,
-
-    start
-
-){
-
-    return (
-
-        normalise(venue)+
-
-        "|"+
-
-        timeToMinutes(start)
-
-    );
-
-}
-
-function findDutyDetail(
-
-    teacher,
-
-    start,
-
-    end
-
-){
-
-    const key=makeDutyDetailKey(
-
-        teacher,
-
-        start,
-
-        end
-
-    );
-
-    return dutyDetailsIndex[key]||null;
-
-}
-
-function findDetailedNextInvigilator(
-
-    venue,
-
-    end,
-
-    currentTeacher
-
-){
-
-    const key=makeVenueSlotKey(
-
-        venue,
-
-        end
-
-    );
-
-    const next=dutyVenueIndex[key];
-
-    if(!next){
-
-        return "-";
-
-    }
-
-    if(
-
-        normalise(next)===
-        normalise(currentTeacher)
-
-    ){
-
-        return "Continues";
-
-    }
-
-    return next;
-
-} 
-    
 function displayExamSchedule(){
-
     clearTable();
-
-    document.getElementById("resultTitle").textContent=
-        "Examination Schedule";
+    document.getElementById("resultTitle").textContent="Examination Schedule";
 
     const head=document.getElementById("tableHead");
     const body=document.getElementById("tableBody");
-
     head.innerHTML="";
     body.innerHTML="";
 
-    if(examSections.length===0){
-
-        body.innerHTML=
-        "<tr><td>No examination schedule found.</td></tr>";
-
+    if(!examSections.length){
+        body.innerHTML="<tr><td>No examination schedule found.</td></tr>";
         return;
-
     }
 
     examSections.forEach(section=>{
-
-        /* Session Title */
-
         const sessionRow=document.createElement("tr");
-
         const sessionCell=document.createElement("td");
-
         sessionCell.colSpan=examHeader.length;
-
         sessionCell.textContent=section.title;
-
         sessionCell.style.background="#004085";
         sessionCell.style.color="white";
         sessionCell.style.fontWeight="bold";
         sessionCell.style.fontSize="15px";
-
         sessionRow.appendChild(sessionCell);
-
         body.appendChild(sessionRow);
 
-        /* Header */
-
-        const headerRow=document.createElement("tr");
-
+        const heading=document.createElement("tr");
         examHeader.forEach((header,index)=>{
-
             const th=document.createElement("th");
-
             th.textContent=header;
-
             if(index===0){
-
                 th.classList.add("sticky-column");
-
             }
-
-            headerRow.appendChild(th);
-
+            heading.appendChild(th);
         });
-
-        body.appendChild(headerRow);
-
-        /* Records */
+        body.appendChild(heading);
 
         section.rows.forEach(record=>{
-
-            const tr=document.createElement("tr");
-
+            const row=document.createElement("tr");
             examHeader.forEach((header,index)=>{
-
-                const td=document.createElement("td");
-
-                td.textContent=record[header]||"";
-
+                const cell=document.createElement("td");
+                cell.textContent=record[header]||"";
                 if(index===0){
-
-                    td.classList.add("sticky-column");
-
+                    cell.classList.add("sticky-column");
                 }
-
-                tr.appendChild(td);
-
+                row.appendChild(cell);
             });
-
-            body.appendChild(tr);
-
+            body.appendChild(row);
         });
-
     });
-
 }
 
 /* ===========================================================
-   FULL MASTER VIEW
+   FULL MASTER VIEW FROM THE DETAILED SESSION TABLE
 =========================================================== */
 
 function displayMasterView(){
-
     clearTable();
-
-    document.getElementById("resultTitle").textContent=
-        "Full Master View";
+    document.getElementById("resultTitle").textContent="Full Master View";
 
     const head=document.getElementById("tableHead");
-
     const body=document.getElementById("tableBody");
 
-    head.innerHTML="";
-    body.innerHTML="";
+    head.innerHTML=`
+        <tr>
+            <th>Teacher</th>
+            <th>Time</th>
+            <th>Duty Stage</th>
+            <th>Subject Paper</th>
+            <th>Venue / Class</th>
+            <th>Next Invigilator</th>
+        </tr>
+    `;
 
-    if(rawCSV.length===0){
-
-        return;
-
-    }
-
-    /* Header */
-
-    const tr=document.createElement("tr");
-
-    rawCSV[headerRow].forEach((cell,index)=>{
-
-        const th=document.createElement("th");
-
-        th.textContent=cell;
-
-        if(index===0){
-
-            th.classList.add("sticky-column");
-
-        }
-
-        tr.appendChild(th);
-
+    const duties=[];
+    teacherNames.forEach(name=>{
+        (teacherSchedules[name]||[]).forEach(duty=>duties.push(duty));
     });
 
-    head.appendChild(tr);
+    duties.sort((a,b)=>
+        a.startMinutes-b.startMinutes ||
+        a.venue.localeCompare(b.venue) ||
+        a.teacher.localeCompare(b.teacher)
+    );
 
-    /* Data */
+    body.innerHTML=duties.length
+        ? duties.map(duty=>dutyRowHTML(duty,true)).join("")
+        : '<tr><td colspan="6">No invigilation duties found.</td></tr>';
+}
 
-    for(let r=1;r<rawCSV.length;r++){
+/* ===========================================================
+   MESSAGE AND TABLE HELPERS
+=========================================================== */
 
-        const row=document.createElement("tr");
+function showValidation(message){
+    const box=document.getElementById("validationBox");
+    box.style.display="block";
+    box.textContent=message;
+}
 
-        rawCSV[r].forEach((cell,index)=>{
+function hideValidation(){
+    document.getElementById("validationBox").style.display="none";
+}
 
-            const td=document.createElement("td");
-
-            td.textContent=cell;
-
-            if(index===0){
-
-                td.classList.add("sticky-column");
-
-            }
-
-            row.appendChild(td);
-
-        });
-
-        body.appendChild(row);
-
+function showWarning(message){
+    const box=document.getElementById("warningBox");
+    if(!box){
+        return;
     }
+    box.style.display="block";
+    box.textContent="Data warning: "+message;
+}
 
+function hideWarning(){
+    const box=document.getElementById("warningBox");
+    if(box){
+        box.style.display="none";
+    }
+}
+
+function showSuccess(message){
+    const box=document.getElementById("successBox");
+    box.style.display="block";
+    box.textContent=message;
+}
+
+function hideSuccess(){
+    document.getElementById("successBox").style.display="none";
+}
+
+function clearTable(){
+    document.getElementById("tableHead").innerHTML="";
+    document.getElementById("tableBody").innerHTML="";
+    document.getElementById("suggestionBox").style.display="none";
+}
+
+function addDataWarning(message){
+    if(!dataWarnings.includes(message)){
+        dataWarnings.push(message);
+    }
 }
 
 /* ===========================================================
    SMALL HELPERS
 =========================================================== */
 
-function escapeHTML(text){
-
-    return String(text)
-
-        .replace(/&/g,"&amp;")
-
-        .replace(/</g,"&lt;")
-
-        .replace(/>/g,"&gt;")
-
-        .replace(/"/g,"&quot;")
-
-        .replace(/'/g,"&#039;");
-
+function cleanCSVCell(value){
+    return String(value||"").replace(/\s+/g," ").trim();
 }
 
-function normalise(text){
+function personKey(value){
+    return String(value||"").toUpperCase().replace(/[^A-Z0-9]/g,"");
+}
 
+function normaliseSession(value){
+    return cleanCSVCell(value).toUpperCase();
+}
+
+function isClock(value){
+    return /^\d{1,2}:\d{2}$/.test(cleanCSVCell(value));
+}
+
+function timeToMinutes(value){
+    const match=String(value||"").match(/(\d{1,2}):(\d{2})/);
+    return match ? Number(match[1])*60+Number(match[2]) : -1;
+}
+
+function getSessionBands(row){
+    const bands=[];
+    let column=0;
+
+    while(column<row.length){
+        const title=cleanCSVCell(row[column]);
+
+        if(!title.toUpperCase().startsWith("SESSION")){
+            column++;
+            continue;
+        }
+
+        const start=column;
+        column++;
+
+        while(
+            column<row.length &&
+            cleanCSVCell(row[column]).toUpperCase()===title.toUpperCase()
+        ){
+            column++;
+        }
+
+        bands.push({title:title,start:start,end:column-1});
+    }
+
+    return bands;
+}
+
+function extractClassCodes(value){
+    return [...new Set(
+        String(value||"").toUpperCase().match(/\b4[A-Z]{2,4}\b/g)||[]
+    )];
+}
+
+function extractRoomCodes(value){
+    return [...new Set(
+        String(value||"").toUpperCase().match(/\b[A-Z]\d{3}\b/g)||[]
+    )];
+}
+
+function escapeHTML(text){
     return String(text)
-
-        .trim()
-
-        .toUpperCase()
-
-        .replace(/\s+/g,"");
-
+        .replace(/&/g,"&amp;")
+        .replace(/</g,"&lt;")
+        .replace(/>/g,"&gt;")
+        .replace(/"/g,"&quot;")
+        .replace(/'/g,"&#039;");
 }
 
 function formatTimeRange(start,end){
-
     return start+" - "+end;
-
 }
 
-/* ===========================================================
-   END OF APPLICATION
-=========================================================== */
 
 </script>
 
