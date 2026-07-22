@@ -443,7 +443,7 @@ const CONFIG = {
 
     daysFile:"days.json",
 
-    teacherKeyword:"teacher",
+    teacherKeyword:"teacher"
 
     lessonCode:"L"
 
@@ -601,7 +601,7 @@ async function loadCSV(day){
 
     resetData();
 
-    currentCSV=day+".csv";
+    currentCSV = encodeURIComponent(day) + ".csv";
 
     document.getElementById("status").textContent="Loading "+currentCSV+"...";
 
@@ -695,7 +695,7 @@ function resetData(){
 
     rawCSV=[];
 
-    teacherIndex={};
+    teacherIndex = Object.create(null);;
 
     teacherSchedules={};
 
@@ -758,7 +758,7 @@ function findTeacherRow(){
             .trim()
             .toLowerCase();
 
-        if(firstCell===CONFIG.teacherKeyword){
+ if(firstCell.trim().toLowerCase().startsWith(CONFIG.teacherKeyword)){
 
             return r;
 
@@ -879,7 +879,7 @@ function buildTimeSlots(){
 
 function buildTeacherIndex(){
 
-    teacherIndex={};
+    teacherIndex = Object.create(null);;
 
     teacherNames=[];
 
@@ -889,13 +889,13 @@ function buildTeacherIndex(){
             .toString()
             .trim();
 
-        if(teacher===""){
+if(teacher===""){
 
-            break;
+    continue;
 
-        }
+}
 
-        teacherIndex[teacher.toUpperCase()]=r;
+        teacherIndex[normalise(teacher)]=r;
 
         teacherNames.push(teacher);
 
@@ -913,7 +913,7 @@ function buildTeacherSchedules(){
 
     teacherNames.forEach(name=>{
 
-        const row=teacherIndex[name.toUpperCase()];
+        const row=teacherIndex[normalise(name)];
 
         const duties=[];
 
@@ -978,19 +978,13 @@ function mergeConsecutiveDuties(duties){
 
         const next=duties[i];
 
-        if(
+if(current.venue === next.venue){
 
-            current.venue===next.venue &&
+    current.end = next.end;
 
-            current.end===next.start
+    current.column = next.column;
 
-        ){
-
-            current.end=next.end;
-
-            current.column=next.column;
-
-        }
+}
 
         else{
 
@@ -1046,7 +1040,7 @@ function findNextInvigilator(venue,lastColumn){
 
     for(const teacher of teacherNames){
 
-        const row=teacherIndex[teacher.toUpperCase()];
+        const row=teacherIndex[normalise(teacher)];
 
         const value=(rawCSV[row][nextColumn]||"")
             .toString()
@@ -1547,7 +1541,7 @@ function displayMasterView(){
 
     const tr=document.createElement("tr");
 
-    rawCSV[0].forEach((cell,index)=>{
+    rawCSV[headerRow].forEach((cell,index)=>{
 
         const th=document.createElement("th");
 
