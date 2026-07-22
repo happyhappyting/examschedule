@@ -1359,68 +1359,209 @@ function displayTeacherSchedule(name){
 
 }
 
-/* ===========================================================
-   PARSE EXAM SECTION
-=========================================================== */
-
 function parseExamSection(){
 
     examSchedule=[];
 
     examSections=[];
 
-    const sessionRows=[];
+    examHeader=[];
+
+    let sessionRow=-1;
+
+    /* Find the first row containing SESSION in any column */
 
     for(let r=0;r<teacherRow;r++){
 
-        const first=(rawCSV[r][0]||"")
-            .toString()
-            .trim()
-            .toUpperCase();
+        const containsSession=rawCSV[r].some(cell=>
 
-        if(first.startsWith("SESSION")){
+            (cell||"")
+                .toString()
+                .trim()
+                .toUpperCase()
+                .startsWith("SESSION")
 
-            sessionRows.push(r);
+        );
+
+        if(containsSession){
+
+            sessionRow=r;
+
+            break;
 
         }
 
     }
 
-    if(sessionRows.length===0){
+    if(sessionRow===-1){
 
         return;
 
     }
 
-    examHeader=rawCSV[sessionRows[0]-1];
+    const sessionCells=rawCSV[sessionRow];
 
-    for(let i=0;i<sessionRows.length;i++){
+    const headerCells=rawCSV[sessionRow+1]||[];
 
-        const start=sessionRows[i];
+    const sessions=[];
 
-        const end=(i===sessionRows.length-1)
-            ? teacherRow-1
-            : sessionRows[i+1]-1;
+    let c=0;
 
-        const sessionName=(rawCSV[start][0]||"")
+    /* Find each horizontal SESSION section */
+
+    while(c<sessionCells.length){
+
+        const title=(sessionCells[c]||"")
             .toString()
             .trim();
 
+        if(!title.toUpperCase().startsWith("SESSION")){
+
+            c++;
+
+            continue;
+
+        }
+
+        const startColumn=c;
+
+        c++;
+
+        while(
+
+            c<sessionCells.length &&
+
+            (sessionCells[c]||"")
+                .toString()
+                .trim()
+                .toUpperCase()===title.toUpperCase()
+
+        ){
+
+            c++;
+
+        }
+
+        sessions.push({
+
+            title:title,
+
+            start:startColumn,
+
+            end:c-1
+
+        });
+
+    }
+
+    if(sessions.length===0){
+
+        return;
+
+    }
+
+    sessions.forEach((session,sessionIndex)=>{
+
+        const columnMap=[];
+
+        const seenHeaders=new Set();
+
+        /* Build the columns and remove duplicated headers */
+
+        for(
+
+            let column=session.start;
+
+            column<=session.end;
+
+            column++
+
+        ){
+
+            const header=(headerCells[column]||"")
+                .toString()
+                .replace(/\s+/g," ")
+                .trim();
+
+            if(header===""){
+
+                continue;
+
+            }
+
+            if(seenHeaders.has(header)){
+
+                continue;
+
+            }
+
+            seenHeaders.add(header);
+
+            columnMap.push({
+
+                header:header,
+
+                column:column
+
+            });
+
+        }
+
+        /* Both sessions use the same display headers */
+
+        if(sessionIndex===0){
+
+            examHeader=[
+
+                "Course",
+
+                ...columnMap.map(item=>item.header)
+
+            ];
+
+        }
+
         const rows=[];
 
-        for(let r=start+1;r<=end;r++){
+        /* Read the examination records */
 
-            const row=rawCSV[r];
+        for(
 
-            const hasData=row.some(cell=>
+            let r=sessionRow+2;
 
-                (cell||"")
+            r<teacherRow;
+
+            r++
+
+        ){
+
+            const sourceRow=rawCSV[r]||[];
+
+            const course=(sourceRow[0]||"")
                 .toString()
-                .trim()!==""
+                .trim();
+
+            const hasSessionData=columnMap.some(item=>
+
+                (sourceRow[item.column]||"")
+                    .toString()
+                    .trim()!==""
 
             );
 
-            if(!hasData){
+            if(!course && !hasSessionData){
+
+                if(rows.length>0){
+
+                    break;
+
+                }
+
+                continue;
+
+            }
+
+            if(!hasSessionData){
 
                 continue;
 
@@ -1428,11 +1569,14 @@ function parseExamSection(){
 
             const record={};
 
-            examHeader.forEach((header,index)=>{
+            record["Course"]=course;
 
-                record[
-                    (header||"").toString().trim()
-                ]=(row[index]||"").toString().trim();
+            columnMap.forEach(item=>{
+
+                record[item.header]=
+                    (sourceRow[item.column]||"")
+                        .toString()
+                        .trim();
 
             });
 
@@ -1442,13 +1586,13 @@ function parseExamSection(){
 
         examSections.push({
 
-            title:sessionName,
+            title:session.title,
 
             rows:rows
 
         });
 
-    }
+    });
 
 }
 
