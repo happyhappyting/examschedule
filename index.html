@@ -1,242 +1,1642 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SAS(S) Exam Schedule</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
-    <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 15px; background-color: #004085; color: #333; margin: 0; }
-        .container { max-width: 1400px; margin: auto; }
-        .header-section { color: white; text-align: center; padding: 15px 0; }
-        .header-section h1 { color: #f1c40f; margin-bottom: 5px; text-transform: uppercase; }
-        .reminder { color: #ffda6a; font-size: 0.85em; font-style: italic; }
-        #lastUpdated { display: inline-block; background: rgba(255, 255, 255, 0.1); padding: 4px 12px; border-radius: 20px; font-size: 0.75em; margin-top: 5px; border: 1px solid rgba(255, 255, 255, 0.2); }
-        .controls { background: #f8f9fa; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); margin-bottom: 20px; text-align: center; }
-        button { padding: 10px 20px; cursor: pointer; border: 2px solid #f1c40f; border-radius: 6px; background: #f1c40f; color: #004085; font-weight: bold; font-size: 15px; margin: 5px; }
-        button.secondary { background: transparent; color: #f1c40f; }
-        input { padding: 10px; width: 220px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; text-transform: uppercase; }
-        #tableContainer { background: white; border-radius: 8px; overflow: auto; box-shadow: 0 4px 10px rgba(0,0,0,0.2); max-height: 75vh; }
-        table { width: 100%; border-collapse: collapse; background: white; }
-        th { background: #e9ecef; color: #004085; font-weight: bold; font-size: 13px; border-bottom: 2px solid #004085; padding: 10px; text-align: left; position: sticky; top: 0; z-index: 10; }
-        td { border-bottom: 1px solid #eee; padding: 8px 10px; font-size: 14px; vertical-align: top; }
-        .full-view-row td:nth-child(2), .full-view-row td:nth-child(3) { font-weight: bold !important; color: #000 !important; background-color: transparent !important; }
-        .full-view-row td { font-size: 11px; min-width: 90px; max-width: 180px; word-wrap: break-word; overflow-wrap: break-word; white-space: normal; line-height: 1.3; border-right: 1px solid #f0f0f0; }
-        .highlight-header { font-weight: 900; color: #004085; background-color: #f0f4f8; }
-        .empty-row td { height: 2px; padding: 0; font-size: 1px; background-color: #f1f1f1; color: transparent; border: none; }
-        .suggestion-box { background: #fff3cd; color: #856404; padding: 15px; border-radius: 8px; margin-top: 10px; display: none; text-align: center; border: 1px solid #ffeeba; }
-        .suggestion-link { color: #004085; font-weight: bold; text-decoration: underline; cursor: pointer; margin: 5px 15px; display: inline-block; padding: 5px; border: 1px solid #00408533; border-radius: 4px; }
-        .comm-label { font-weight: bold; color: #004085; text-transform: uppercase; font-size: 0.75em; display: block; margin-top: 4px; border-bottom: 1px solid #eee; }
-        .comm-name { display: block; padding-left: 5px; padding-bottom: 4px; font-size: 0.9em; }
-        #resultCount { margin-bottom: 10px; font-weight: bold; color: white; text-align: center; font-size: 0.9em; }
-        @media print { .controls, .header-section, .secondary, .suggestion-box { display: none; } body { background: white; } #tableContainer { max-height: none; box-shadow: none; } }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>SAS(S) Exam Portal</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+
+<style>
+
+:root{
+    --blue:#004085;
+    --gold:#f1c40f;
+    --light:#f8f9fa;
+    --border:#d9d9d9;
+    --header:#eef3f8;
+    --shadow:0 4px 15px rgba(0,0,0,.2);
+}
+
+*{
+    box-sizing:border-box;
+}
+
+body{
+    margin:0;
+    padding:15px;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    background:var(--blue);
+    color:#333;
+}
+
+.container{
+    max-width:1500px;
+    margin:auto;
+}
+
+.header{
+    text-align:center;
+    color:white;
+    margin-bottom:18px;
+}
+
+.header h1{
+    margin:0;
+    color:var(--gold);
+    letter-spacing:1px;
+}
+
+.header p{
+    margin:8px 0;
+    font-size:.9rem;
+}
+
+#lastUpdated{
+    display:inline-block;
+    margin-top:8px;
+    padding:6px 12px;
+    border-radius:20px;
+    background:rgba(255,255,255,.12);
+    border:1px solid rgba(255,255,255,.2);
+    font-size:.8rem;
+}
+
+.card{
+    background:white;
+    border-radius:12px;
+    padding:20px;
+    box-shadow:var(--shadow);
+    margin-bottom:20px;
+}
+
+.form-row{
+    display:flex;
+    gap:15px;
+    align-items:end;
+    flex-wrap:wrap;
+}
+
+.form-group{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+}
+
+.form-group label{
+    font-weight:bold;
+    color:var(--blue);
+}
+
+select,
+input{
+    padding:10px 12px;
+    font-size:15px;
+    border-radius:6px;
+    border:1px solid var(--border);
+}
+
+select{
+    min-width:220px;
+}
+
+input{
+    min-width:260px;
+    text-transform:uppercase;
+}
+
+.button-row{
+    margin-top:18px;
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+}
+
+button{
+    cursor:pointer;
+    border:none;
+    border-radius:6px;
+    padding:10px 18px;
+    font-weight:bold;
+    font-size:15px;
+    transition:.2s;
+}
+
+button:hover{
+    transform:translateY(-1px);
+}
+
+.primary{
+    background:var(--gold);
+    color:var(--blue);
+}
+
+.secondary{
+    background:var(--blue);
+    color:white;
+}
+
+.info-bar{
+    margin:12px 0;
+    color:white;
+    display:flex;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:10px;
+    font-size:.9rem;
+}
+
+#status{
+    font-weight:bold;
+}
+
+#resultTitle{
+    font-weight:bold;
+}
+
+#suggestionBox{
+    display:none;
+    margin-top:15px;
+    background:#fff8db;
+    border:1px solid #ecd27d;
+    border-radius:8px;
+    padding:12px;
+}
+
+#suggestionBox strong{
+    display:block;
+    margin-bottom:10px;
+}
+
+#suggestionLinks{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+}
+
+.suggestion{
+    padding:6px 12px;
+    border-radius:20px;
+    background:white;
+    border:1px solid var(--blue);
+    color:var(--blue);
+    cursor:pointer;
+    font-size:.9rem;
+}
+
+.suggestion:hover{
+    background:var(--blue);
+    color:white;
+}
+
+#tableWrapper{
+    background:white;
+    border-radius:10px;
+    overflow:auto;
+    max-height:76vh;
+    box-shadow:var(--shadow);
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    background:white;
+}
+
+thead th{
+    position:sticky;
+    top:0;
+    z-index:30;
+    background:var(--header);
+    color:var(--blue);
+    border-bottom:2px solid var(--blue);
+}
+
+th,
+td{
+    border:1px solid #ececec;
+    padding:8px 10px;
+    font-size:14px;
+    white-space:nowrap;
+}
+
+tbody tr:nth-child(even){
+    background:#fafafa;
+}
+
+.sticky-column{
+    position:sticky;
+    left:0;
+    background:white;
+    z-index:20;
+    font-weight:bold;
+}
+
+thead .sticky-column{
+    z-index:40;
+    background:var(--header);
+}
+
+.session-title{
+    background:var(--blue);
+    color:white;
+    font-weight:bold;
+    padding:10px;
+    margin-top:18px;
+    border-radius:6px 6px 0 0;
+}
+
+.validation{
+    display:none;
+    margin-top:15px;
+    padding:12px;
+    border-radius:6px;
+    background:#ffeaea;
+    color:#a40000;
+    border:1px solid #ffbcbc;
+}
+
+.success{
+    display:none;
+    margin-top:15px;
+    padding:12px;
+    border-radius:6px;
+    background:#edfceb;
+    color:#186b18;
+    border:1px solid #9ed39e;
+}
+
+@media print{
+
+body{
+    background:white;
+}
+
+.header,
+.card,
+#suggestionBox,
+.validation,
+.success{
+    display:none!important;
+}
+
+#tableWrapper{
+    max-height:none;
+    overflow:visible;
+    box-shadow:none;
+}
+
+}
+
+@media(max-width:768px){
+
+body{
+    padding:10px;
+}
+
+.form-row{
+    flex-direction:column;
+    align-items:stretch;
+}
+
+.form-group{
+    width:100%;
+}
+
+select,
+input{
+    width:100%;
+    min-width:unset;
+}
+
+.button-row{
+    flex-direction:column;
+}
+
+button{
+    width:100%;
+}
+
+.info-bar{
+    flex-direction:column;
+}
+
+th,
+td{
+    font-size:13px;
+}
+
+}
+
+</style>
+
 </head>
+
 <body>
+
 <div class="container">
-    <div class="header-section">
-        <h1>SAS(S) Exam Schedule</h1>
-        <p class="reminder">⚠️ Enter name as per official roster.</p>
-        <div id="lastUpdated">Checking for updates...</div>
-    </div>
-    <div class="controls">
-        <input type="text" id="teacherName" placeholder="ENTER NAME..." onkeypress="if(event.key==='Enter') searchSchedule()">
-        <button onclick="searchSchedule()">Find My Duties</button>
-        <button class="secondary" onclick="toggleFullSchedule()">Full Master View</button>
-        <button class="secondary" onclick="window.print()">Print</button>
-        <div id="suggestionBox" class="suggestion-box">
-            <div style="margin-bottom: 10px;"><b>No exact match found. Did you mean?</b></div>
-            <div id="suggestionLinks"></div>
-        </div>
-    </div>
-    <div id="resultCount"></div>
-    <div id="tableContainer">
-        <table id="mainTable">
-            <thead id="tableHead"></thead>
-            <tbody id="tableBody"></tbody>
-        </table>
-    </div>
+
+<div class="header">
+
+<h1>SAS(S) EXAM PORTAL</h1>
+
+<p>Select an Exam Day before searching.</p>
+
+<div id="lastUpdated">
+Loading...
 </div>
+
+</div>
+
+<div class="card">
+
+<div class="form-row">
+
+<div class="form-group">
+
+<label>Exam Day</label>
+
+<select id="daySelect"></select>
+
+</div>
+
+<div class="form-group">
+
+<label>Teacher Name</label>
+
+<input
+id="teacherInput"
+type="text"
+placeholder="ENTER NAME..."
+autocomplete="off">
+
+</div>
+
+</div>
+
+<div class="button-row">
+
+<button class="primary" id="btnSearch">
+Find My Duties
+</button>
+
+<button class="secondary" id="btnExam">
+Exam Schedule
+</button>
+
+<button class="secondary" id="btnMaster">
+Full Master View
+</button>
+
+<button class="secondary" id="btnPrint">
+Print
+</button>
+
+</div>
+
+<div id="suggestionBox">
+
+<strong>No exact match found. Did you mean?</strong>
+
+<div id="suggestionLinks"></div>
+
+</div>
+
+<div class="validation" id="validationBox"></div>
+
+<div class="success" id="successBox"></div>
+
+</div>
+
+<div class="info-bar">
+
+<div id="status">
+Loading...
+</div>
+
+<div id="resultTitle"></div>
+
+</div>
+
+<div id="tableWrapper">
+
+<table id="mainTable">
+
+<thead id="tableHead"></thead>
+
+<tbody id="tableBody"></tbody>
+
+</table>
+
+</div>
+
+</div>
+
 <script>
-    let masterData = [];
-    let teacherList = new Set();
 
-    window.onload = function() {
-        fetch("master_schedule.csv").then(response => {
-            const lastMod = response.headers.get("Last-Modified");
-            if (lastMod) {
-                const date = new Date(lastMod);
-                document.getElementById('lastUpdated').innerText = "Last Updated: " + date.toLocaleString('en-SG', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+/* ===========================================================
+   CONFIG
+=========================================================== */
+
+const CONFIG = {
+
+    daysFile:"days.json",
+
+    teacherKeyword:"teacher",
+
+    lessonCode:"L"
+
+};
+
+/* ===========================================================
+   GLOBAL DATA
+=========================================================== */
+
+let rawCSV = [];
+
+let teacherIndex = {};
+
+let teacherSchedules = {};
+
+let teacherNames = [];
+
+let examSchedule = [];
+
+let timeSlots = [];
+
+let currentCSV = "";
+
+let teacherRow = -1;
+
+let headerRow = -1;
+
+let teacherStartRow = -1;
+
+let timeColumns = [];
+
+let examHeader = [];
+
+let examSections = [];
+
+/* ===========================================================
+   INITIALIZATION
+=========================================================== */
+
+window.addEventListener("load", initialise);
+
+async function initialise(){
+
+    registerEvents();
+
+    await loadDays();
+
+}
+
+/* ===========================================================
+   EVENTS
+=========================================================== */
+
+function registerEvents(){
+
+    document
+        .getElementById("btnSearch")
+        .addEventListener("click", searchTeacher);
+
+    document
+        .getElementById("btnExam")
+        .addEventListener("click", displayExamSchedule);
+
+    document
+        .getElementById("btnMaster")
+        .addEventListener("click", displayMasterView);
+
+    document
+        .getElementById("btnPrint")
+        .addEventListener("click", ()=>window.print());
+
+    document
+        .getElementById("teacherInput")
+        .addEventListener("keypress",e=>{
+
+            if(e.key==="Enter"){
+                searchTeacher();
             }
-            return response.text();
-        }).then(csvText => {
-            Papa.parse(csvText, {
-                skipEmptyLines: true,
-                complete: function(results) {
-                    masterData = results.data;
-                    for (let r = 0; r < masterData.length; r++) {
-                        for (let c = 3; c < masterData[r].length; c++) {
-                            let val = (masterData[r][c] || "").toString().trim();
-                            if (val && val.length > 3 && !val.includes("Period") && !/\d/.test(val)) {
-                                teacherList.add(val);
-                            }
-                        }
-                    }
-                }
-            });
+
         });
-    };
 
-    function searchSchedule(manualName = null) {
-        const inputField = document.getElementById('teacherName');
-        const suggestionBox = document.getElementById('suggestionBox');
-        let searchTerm = manualName ? manualName : inputField.value.trim();
-        if (manualName) inputField.value = manualName;
-        const searchLower = searchTerm.toLowerCase();
-        
-        suggestionBox.style.display = "none";
-        document.getElementById('tableBody').innerHTML = "";
-        if (!searchLower || searchLower.length < 2) return;
-        
-        let rawMatches = [];
-        let exactMatchFound = false;
+    document
+        .getElementById("daySelect")
+        .addEventListener("change",changeDay);
 
-        for (let r = 0; r < masterData.length; r++) {
-            for (let c = 3; c < masterData[r].length; c++) {
-                let cellValue = (masterData[r][c] || "").toString().trim();
-                // STRICT MATCH (Case Insensitive)
-                if (cellValue.toLowerCase() === searchLower) {
-                    exactMatchFound = true;
-                    let currentClass = masterData[r][1] || "-";
-                    let currentVenue = masterData[r][2] || "-";
-                    let before = (masterData[r-1] && masterData[r-1][c]) ? masterData[r-1][c] : "---";
-                    let after = (masterData[r+1] && masterData[r+1][c]) ? masterData[r+1][c] : "---";
-                    let period = "N/A", startTime = "0000", endTime = "0000";
-                    for (let checkR = r; checkR >= 0; checkR--) {
-                        if (masterData[checkR][c] && masterData[checkR][c].toString().includes("Period")) {
-                            period = masterData[checkR][c];
-                            if (masterData[checkR + 2]) {
-                                startTime = masterData[checkR + 2][c] || "0000";
-                                endTime = masterData[checkR + 2][c+1] || "0000";
-                            }
-                            break;
-                        }
-                    }
-                    rawMatches.push({ currentClass, currentVenue, period, startTime, endTime, before, after });
-                }
-            }
+}
+
+/* ===========================================================
+   LOAD DAYS.JSON
+=========================================================== */
+
+async function loadDays(){
+
+    try{
+
+        const response = await fetch(CONFIG.daysFile);
+
+        if(!response.ok){
+
+            throw new Error("Unable to load days.json");
+
         }
 
-        if (exactMatchFound) {
-            rawMatches.sort((a, b) => parseInt(a.startTime) - parseInt(b.startTime));
-            displayPersonal(mergeDuties(rawMatches));
-        } else {
-            document.getElementById('resultCount').innerText = "No exact match for '" + searchTerm + "'.";
-            findSuggestions(searchLower);
+        const days = await response.json();
+
+        const select = document.getElementById("daySelect");
+
+        select.innerHTML="";
+
+        days.forEach(day=>{
+
+            const option=document.createElement("option");
+
+            option.value=day;
+
+            option.textContent=day;
+
+            select.appendChild(option);
+
+        });
+
+        if(days.length>0){
+
+            await loadCSV(days[0]);
+
         }
+
     }
 
-    function mergeDuties(matches) {
-        if (matches.length === 0) return [];
-        let merged = [];
-        let current = JSON.parse(JSON.stringify(matches[0]));
-        for (let i = 1; i < matches.length; i++) {
-            let next = matches[i];
-            if (next.currentClass === current.currentClass && next.currentVenue === current.currentVenue) {
-                current.endTime = next.endTime;
-                current.period = current.period + " & " + next.period;
-                current.after = next.after;
-            } else { merged.push(current); current = JSON.parse(JSON.stringify(next)); }
-        }
-        merged.push(current);
-        return merged;
+    catch(error){
+
+        showValidation(error.message);
+
     }
 
-        function findSuggestions(typedName) {
-        const suggestionBox = document.getElementById('suggestionBox');
-        const suggestionLinks = document.getElementById('suggestionLinks');
-        suggestionLinks.innerHTML = "";
-        
-        // 1. Squash the input to handle "jingting" vs "Jing Ting"
-        let cleanTyped = typedName.toLowerCase().replace(/\s+/g, '');
+}
 
-        let suggestions = Array.from(teacherList).filter(t => {
-            let lowerT = t.toLowerCase();
-            let cleanT = lowerT.replace(/\s+/g, '');
-            
-            // CHECK 1: Does the squashed roster name contain the squashed search?
-            if (cleanT.includes(cleanTyped)) return true;
-            
-            // CHECK 2: Is there a 1-character typo in the squashed strings?
-            // (This catches "jinting" vs "jingting")
-            if (levenshteinDistance(cleanT, cleanTyped) <= 1) return true;
+/* ===========================================================
+   CHANGE DAY
+=========================================================== */
 
-            // CHECK 3: Check if the typo exists within a subset of the name
-            // (e.g., is "jinting" close to "jingting" even if "Sin" is there?)
-            let parts = lowerT.split(" ");
-            let squashedParts = [];
-            // Create combinations like ["sin", "jing", "ting", "sinjing", "jingting"]
-            for(let i=0; i<parts.length; i++) {
-                let combo = "";
-                for(let j=i; j<parts.length; j++) {
-                    combo += parts[j];
-                    if (levenshteinDistance(combo, cleanTyped) <= 1) return true;
-                }
+async function changeDay(){
+
+    const selected=document.getElementById("daySelect").value;
+
+    await loadCSV(selected);
+
+}
+
+/* ===========================================================
+   LOAD CSV
+=========================================================== */
+
+async function loadCSV(day){
+
+    resetData();
+
+    currentCSV=day+".csv";
+
+    document.getElementById("status").textContent="Loading "+currentCSV+"...";
+
+    try{
+
+        const response=await fetch(currentCSV);
+
+        if(!response.ok){
+
+            throw new Error("Unable to load "+currentCSV);
+
+        }
+
+        updateLastModified(response);
+
+        const csvText=await response.text();
+
+        const parsed=Papa.parse(csvText,{
+            skipEmptyLines:false
+        });
+
+        rawCSV=parsed.data;
+
+        validateCSV();
+
+        parseTeacherSection();
+
+        parseExamSection();
+
+        buildTeacherSchedules();
+
+        showSuccess(
+            teacherNames.length+
+            " teachers indexed • "+
+            timeSlots.length+
+            " time slots loaded"
+        );
+
+        document.getElementById("status").textContent=currentCSV+" loaded.";
+
+        clearTable();
+
+        document.getElementById("resultTitle").textContent="";
+
+    }
+
+    catch(error){
+
+        showValidation(error.message);
+
+    }
+
+}
+
+/* ===========================================================
+   LAST MODIFIED
+=========================================================== */
+
+function updateLastModified(response){
+
+    const last=response.headers.get("Last-Modified");
+
+    if(!last){
+
+        document.getElementById("lastUpdated").textContent=
+        "Last Updated : Unknown";
+
+        return;
+
+    }
+
+    const d=new Date(last);
+
+    document.getElementById("lastUpdated").textContent=
+        "Last Updated : "+
+        d.toLocaleString("en-SG",{
+            day:"2-digit",
+            month:"short",
+            year:"numeric",
+            hour:"2-digit",
+            minute:"2-digit"
+        });
+
+}
+
+/* ===========================================================
+   RESET
+=========================================================== */
+
+function resetData(){
+
+    rawCSV=[];
+
+    teacherIndex={};
+
+    teacherSchedules={};
+
+    teacherNames=[];
+
+    examSchedule=[];
+
+    examSections=[];
+
+    timeSlots=[];
+
+    teacherRow=-1;
+
+    headerRow=-1;
+
+    teacherStartRow=-1;
+
+    examHeader=[];
+
+    timeColumns=[];
+
+    hideValidation();
+
+    hideSuccess();
+
+}
+
+/* ===========================================================
+   VALIDATION
+=========================================================== */
+
+function validateCSV(){
+
+    teacherRow=findTeacherRow();
+
+    if(teacherRow===-1){
+
+        throw new Error(
+            'Unable to locate the "Teacher" row.'
+        );
+
+    }
+
+    headerRow=teacherRow-1;
+
+    teacherStartRow=teacherRow+1;
+
+}
+
+/* ===========================================================
+   FIND TEACHER ROW
+=========================================================== */
+
+function findTeacherRow(){
+
+    for(let r=0;r<rawCSV.length;r++){
+
+        const firstCell=(rawCSV[r][0]||"")
+            .toString()
+            .trim()
+            .toLowerCase();
+
+        if(firstCell===CONFIG.teacherKeyword){
+
+            return r;
+
+        }
+
+    }
+
+    return -1;
+
+}
+
+/* ===========================================================
+   MESSAGE BOXES
+=========================================================== */
+
+function showValidation(message){
+
+    const box=document.getElementById("validationBox");
+
+    box.style.display="block";
+
+    box.textContent=message;
+
+}
+
+function hideValidation(){
+
+    document.getElementById("validationBox").style.display="none";
+
+}
+
+function showSuccess(message){
+
+    const box=document.getElementById("successBox");
+
+    box.style.display="block";
+
+    box.textContent=message;
+
+}
+
+function hideSuccess(){
+
+    document.getElementById("successBox").style.display="none";
+
+}
+
+/* ===========================================================
+   TABLE HELPERS
+=========================================================== */
+
+function clearTable(){
+
+    document.getElementById("tableHead").innerHTML="";
+
+    document.getElementById("tableBody").innerHTML="";
+
+    document.getElementById("suggestionBox").style.display="none";
+
+}
+
+/* ===========================================================
+   PARSE TEACHER SECTION
+=========================================================== */
+
+function parseTeacherSection(){
+
+    buildTimeSlots();
+
+    buildTeacherIndex();
+
+}
+
+/* ===========================================================
+   BUILD TIME SLOTS
+=========================================================== */
+
+function buildTimeSlots(){
+
+    timeSlots=[];
+    timeColumns=[];
+
+    for(let c=1;c<rawCSV[teacherRow].length;c++){
+
+        const endTime=(rawCSV[teacherRow][c]||"")
+            .toString()
+            .trim();
+
+        if(endTime===""){
+
+            break;
+
+        }
+
+        const startTime=(rawCSV[headerRow][c]||"")
+            .toString()
+            .trim();
+
+        timeColumns.push(c);
+
+        timeSlots.push({
+
+            column:c,
+
+            start:startTime,
+
+            end:endTime
+
+        });
+
+    }
+
+}
+
+/* ===========================================================
+   BUILD TEACHER INDEX
+=========================================================== */
+
+function buildTeacherIndex(){
+
+    teacherIndex={};
+
+    teacherNames=[];
+
+    for(let r=teacherStartRow;r<rawCSV.length;r++){
+
+        const teacher=(rawCSV[r][0]||"")
+            .toString()
+            .trim();
+
+        if(teacher===""){
+
+            break;
+
+        }
+
+        teacherIndex[teacher.toUpperCase()]=r;
+
+        teacherNames.push(teacher);
+
+    }
+
+}
+
+/* ===========================================================
+   BUILD TEACHER SCHEDULES
+=========================================================== */
+
+function buildTeacherSchedules(){
+
+    teacherSchedules={};
+
+    teacherNames.forEach(name=>{
+
+        const row=teacherIndex[name.toUpperCase()];
+
+        const duties=[];
+
+        timeSlots.forEach(slot=>{
+
+            const value=(rawCSV[row][slot.column]||"")
+                .toString()
+                .trim();
+
+            if(value===""){
+
+                return;
+
             }
-            
-            return false;
-        }).slice(0, 5);
 
-        if (suggestions.length > 0) {
-            suggestionBox.style.display = "block";
-            suggestions.forEach(s => {
-                let span = document.createElement('span');
-                span.className = "suggestion-link";
-                span.innerText = s;
-                span.onclick = () => searchSchedule(s);
-                suggestionLinks.appendChild(span);
+            if(value.toUpperCase()===CONFIG.lessonCode){
+
+                return;
+
+            }
+
+            duties.push({
+
+                start:slot.start,
+
+                end:slot.end,
+
+                venue:value,
+
+                nextInvigilator:"",
+                column:slot.column
+
             });
-        }
+
+        });
+
+        teacherSchedules[name]=mergeConsecutiveDuties(duties);
+
+    });
+
+    attachNextInvigilators();
+
+}
+
+/* ===========================================================
+   MERGE CONSECUTIVE DUTIES
+=========================================================== */
+
+function mergeConsecutiveDuties(duties){
+
+    if(duties.length===0){
+
+        return [];
+
     }
 
+    const merged=[];
 
-    function levenshteinDistance(a, b) {
-        const matrix = Array.from({ length: b.length + 1 }, (_, i) => [i]);
-        for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
-        for (let i = 1; i <= b.length; i++) {
-            for (let j = 1; j <= a.length; j++) {
-                matrix[i][j] = b[i-1] === a[j-1] ? matrix[i-1][j-1] : Math.min(matrix[i-1][j-1], matrix[i][j-1], matrix[i-1][j]) + 1;
+    let current={...duties[0]};
+
+    for(let i=1;i<duties.length;i++){
+
+        const next=duties[i];
+
+        if(
+
+            current.venue===next.venue &&
+
+            current.end===next.start
+
+        ){
+
+            current.end=next.end;
+
+            current.column=next.column;
+
+        }
+
+        else{
+
+            merged.push(current);
+
+            current={...next};
+
+        }
+
+    }
+
+    merged.push(current);
+
+    return merged;
+
+}
+
+/* ===========================================================
+   FIND NEXT INVIGILATORS
+=========================================================== */
+
+function attachNextInvigilators(){
+
+    Object.keys(teacherSchedules).forEach(name=>{
+
+        teacherSchedules[name].forEach(duty=>{
+
+            duty.nextInvigilator=
+                findNextInvigilator(
+                    duty.venue,
+                    duty.column
+                );
+
+        });
+
+    });
+
+}
+
+/* ===========================================================
+   NEXT INVIGILATOR
+=========================================================== */
+
+function findNextInvigilator(venue,lastColumn){
+
+    const nextColumn=lastColumn+1;
+
+    if(!timeColumns.includes(nextColumn)){
+
+        return "-";
+
+    }
+
+    for(const teacher of teacherNames){
+
+        const row=teacherIndex[teacher.toUpperCase()];
+
+        const value=(rawCSV[row][nextColumn]||"")
+            .toString()
+            .trim();
+
+        if(value===venue){
+
+            return teacher;
+
+        }
+
+    }
+
+    return "-";
+
+}
+
+/* ===========================================================
+   SEARCH
+=========================================================== */
+
+function searchTeacher(selectedName=null){
+
+    clearTable();
+
+    let name;
+
+    if(selectedName){
+
+        name=selectedName;
+
+        document.getElementById("teacherInput").value=name;
+
+    }
+
+    else{
+
+        name=document
+            .getElementById("teacherInput")
+            .value
+            .trim();
+
+    }
+
+    if(name===""){
+
+        return;
+
+    }
+
+    const teacher=findExactTeacher(name);
+
+    if(!teacher){
+
+        showSuggestions(name);
+
+        document.getElementById("resultTitle").textContent=
+        "No exact match found.";
+
+        return;
+
+    }
+
+    displayTeacherSchedule(teacher);
+
+}
+
+/* ===========================================================
+   FIND EXACT TEACHER
+=========================================================== */
+
+function findExactTeacher(input){
+
+    const target=input
+        .toUpperCase()
+        .replace(/\s+/g,"");
+
+    for(const teacher of teacherNames){
+
+        const clean=teacher
+            .toUpperCase()
+            .replace(/\s+/g,"");
+
+        if(clean===target){
+
+            return teacher;
+
+        }
+
+    }
+
+    return null;
+
+}
+
+/* ===========================================================
+   SUGGESTIONS
+=========================================================== */
+
+function showSuggestions(input){
+
+    const box=document.getElementById("suggestionBox");
+
+    const links=document.getElementById("suggestionLinks");
+
+    links.innerHTML="";
+
+    const typed=input
+        .toLowerCase()
+        .replace(/\s+/g,"");
+
+    const suggestions=teacherNames.filter(name=>{
+
+        const lower=name.toLowerCase();
+
+        const clean=lower.replace(/\s+/g,"");
+
+        if(clean.includes(typed)){
+
+            return true;
+
+        }
+
+        if(levenshtein(clean,typed)<=1){
+
+            return true;
+
+        }
+
+        const parts=lower.split(" ");
+
+        for(let i=0;i<parts.length;i++){
+
+            let combine="";
+
+            for(let j=i;j<parts.length;j++){
+
+                combine+=parts[j];
+
+                if(levenshtein(combine,typed)<=1){
+
+                    return true;
+
+                }
+
             }
+
         }
-        return matrix[b.length][a.length];
+
+        return false;
+
+    }).slice(0,5);
+
+    if(suggestions.length===0){
+
+        return;
+
     }
 
-    function displayPersonal(matches) {
-        const head = document.getElementById('tableHead');
-        const body = document.getElementById('tableBody');
-        document.getElementById('resultCount').innerText = `Results for "${document.getElementById('teacherName').value}"`;
-        head.innerHTML = `<tr><th>Period</th><th>Time</th><th>Class</th><th>Venue</th><th>Communication</th></tr>`;
-        body.innerHTML = matches.map(m => `<tr><td><b>${m.period}</b></td><td>${m.startTime} - ${m.endTime}</td><td><b>${m.currentClass}</b></td><td>${m.currentVenue}</td><td><span class="comm-label">Before:</span><span class="comm-name">${m.before}</span><span class="comm-label">After:</span><span class="comm-name">${m.after}</span></td></tr>`).join('');
+    box.style.display="block";
+
+    suggestions.forEach(name=>{
+
+        const span=document.createElement("span");
+
+        span.className="suggestion";
+
+        span.textContent=name;
+
+        span.onclick=()=>searchTeacher(name);
+
+        links.appendChild(span);
+
+    });
+
+}
+
+/* ===========================================================
+   LEVENSHTEIN
+=========================================================== */
+
+function levenshtein(a,b){
+
+    const matrix=[];
+
+    for(let i=0;i<=b.length;i++){
+
+        matrix[i]=[i];
+
     }
 
-    function toggleFullSchedule() {
-        const head = document.getElementById('tableHead');
-        const body = document.getElementById('tableBody');
-        document.getElementById('suggestionBox').style.display = "none";
-        document.getElementById('resultCount').innerText = "Full Master View";
-        head.innerHTML = ""; 
-        body.innerHTML = masterData.map((row) => {
-            const hasData = row.some(cell => cell && cell.toString().trim().length > 0);
-            const rowClass = hasData ? "full-view-row" : "empty-row";
-            let cellsHTML = row.map((cell, idx) => {
-                let cellText = (cell || '').toString();
-                let isHeader = cellText.toLowerCase().includes('period') || cellText.toLowerCase().includes('time');
-                let showHighlight = isHeader && idx !== 1 && idx !== 2;
-                return `<td class="${showHighlight ? 'highlight-header' : ''}">${cellText}</td>`;
-            }).join('');
-            return `<tr class="${rowClass}">${cellsHTML}</tr>`;
-        }).join('');
+    for(let j=0;j<=a.length;j++){
+
+        matrix[0][j]=j;
+
     }
+
+    for(let i=1;i<=b.length;i++){
+
+        for(let j=1;j<=a.length;j++){
+
+            if(b.charAt(i-1)===a.charAt(j-1)){
+
+                matrix[i][j]=matrix[i-1][j-1];
+
+            }
+
+            else{
+
+                matrix[i][j]=Math.min(
+
+                    matrix[i-1][j-1]+1,
+
+                    matrix[i][j-1]+1,
+
+                    matrix[i-1][j]+1
+
+                );
+
+            }
+
+        }
+
+    }
+
+    return matrix[b.length][a.length];
+
+}
+
+/* ===========================================================
+   DISPLAY TEACHER SCHEDULE
+=========================================================== */
+
+function displayTeacherSchedule(name){
+
+    const head=document.getElementById("tableHead");
+
+    const body=document.getElementById("tableBody");
+
+    const duties=teacherSchedules[name]||[];
+
+    document.getElementById("resultTitle").textContent=
+        "Results for "+name;
+
+    if(duties.length===0){
+
+        head.innerHTML="";
+
+        body.innerHTML=
+        "<tr><td>No invigilation duties found.</td></tr>";
+
+        return;
+
+    }
+
+    head.innerHTML=`
+        <tr>
+            <th>Time</th>
+            <th>Venue</th>
+            <th>Next Invigilator</th>
+        </tr>
+    `;
+
+    body.innerHTML=duties.map(d=>`
+
+        <tr>
+
+            <td>${d.start} - ${d.end}</td>
+
+            <td>${d.venue}</td>
+
+            <td>${d.nextInvigilator}</td>
+
+        </tr>
+
+    `).join("");
+
+}
+
+/* ===========================================================
+   PARSE EXAM SECTION
+=========================================================== */
+
+function parseExamSection(){
+
+    examSchedule=[];
+
+    examSections=[];
+
+    const sessionRows=[];
+
+    for(let r=0;r<teacherRow;r++){
+
+        const first=(rawCSV[r][0]||"")
+            .toString()
+            .trim()
+            .toUpperCase();
+
+        if(first.startsWith("SESSION")){
+
+            sessionRows.push(r);
+
+        }
+
+    }
+
+    if(sessionRows.length===0){
+
+        return;
+
+    }
+
+    examHeader=rawCSV[sessionRows[0]-1];
+
+    for(let i=0;i<sessionRows.length;i++){
+
+        const start=sessionRows[i];
+
+        const end=(i===sessionRows.length-1)
+            ? teacherRow-1
+            : sessionRows[i+1]-1;
+
+        const sessionName=(rawCSV[start][0]||"")
+            .toString()
+            .trim();
+
+        const rows=[];
+
+        for(let r=start+1;r<=end;r++){
+
+            const row=rawCSV[r];
+
+            const hasData=row.some(cell=>
+
+                (cell||"")
+                .toString()
+                .trim()!==""
+
+            );
+
+            if(!hasData){
+
+                continue;
+
+            }
+
+            const record={};
+
+            examHeader.forEach((header,index)=>{
+
+                record[
+                    (header||"").toString().trim()
+                ]=(row[index]||"").toString().trim();
+
+            });
+
+            rows.push(record);
+
+        }
+
+        examSections.push({
+
+            title:sessionName,
+
+            rows:rows
+
+        });
+
+    }
+
+}
+```
+
+/* ===========================================================
+   DISPLAY EXAM SCHEDULE
+=========================================================== */
+
+function displayExamSchedule(){
+
+    clearTable();
+
+    document.getElementById("resultTitle").textContent=
+        "Examination Schedule";
+
+    const head=document.getElementById("tableHead");
+    const body=document.getElementById("tableBody");
+
+    head.innerHTML="";
+    body.innerHTML="";
+
+    if(examSections.length===0){
+
+        body.innerHTML=
+        "<tr><td>No examination schedule found.</td></tr>";
+
+        return;
+
+    }
+
+    examSections.forEach(section=>{
+
+        /* Session Title */
+
+        const sessionRow=document.createElement("tr");
+
+        const sessionCell=document.createElement("td");
+
+        sessionCell.colSpan=examHeader.length;
+
+        sessionCell.textContent=section.title;
+
+        sessionCell.style.background="#004085";
+        sessionCell.style.color="white";
+        sessionCell.style.fontWeight="bold";
+        sessionCell.style.fontSize="15px";
+
+        sessionRow.appendChild(sessionCell);
+
+        body.appendChild(sessionRow);
+
+        /* Header */
+
+        const headerRow=document.createElement("tr");
+
+        examHeader.forEach((header,index)=>{
+
+            const th=document.createElement("th");
+
+            th.textContent=header;
+
+            if(index===0){
+
+                th.classList.add("sticky-column");
+
+            }
+
+            headerRow.appendChild(th);
+
+        });
+
+        body.appendChild(headerRow);
+
+        /* Records */
+
+        section.rows.forEach(record=>{
+
+            const tr=document.createElement("tr");
+
+            examHeader.forEach((header,index)=>{
+
+                const td=document.createElement("td");
+
+                td.textContent=record[header]||"";
+
+                if(index===0){
+
+                    td.classList.add("sticky-column");
+
+                }
+
+                tr.appendChild(td);
+
+            });
+
+            body.appendChild(tr);
+
+        });
+
+    });
+
+}
+
+/* ===========================================================
+   FULL MASTER VIEW
+=========================================================== */
+
+function displayMasterView(){
+
+    clearTable();
+
+    document.getElementById("resultTitle").textContent=
+        "Full Master View";
+
+    const head=document.getElementById("tableHead");
+
+    const body=document.getElementById("tableBody");
+
+    head.innerHTML="";
+    body.innerHTML="";
+
+    if(rawCSV.length===0){
+
+        return;
+
+    }
+
+    /* Header */
+
+    const tr=document.createElement("tr");
+
+    rawCSV[0].forEach((cell,index)=>{
+
+        const th=document.createElement("th");
+
+        th.textContent=cell;
+
+        if(index===0){
+
+            th.classList.add("sticky-column");
+
+        }
+
+        tr.appendChild(th);
+
+    });
+
+    head.appendChild(tr);
+
+    /* Data */
+
+    for(let r=1;r<rawCSV.length;r++){
+
+        const row=document.createElement("tr");
+
+        rawCSV[r].forEach((cell,index)=>{
+
+            const td=document.createElement("td");
+
+            td.textContent=cell;
+
+            if(index===0){
+
+                td.classList.add("sticky-column");
+
+            }
+
+            row.appendChild(td);
+
+        });
+
+        body.appendChild(row);
+
+    }
+
+}
+
+/* ===========================================================
+   SMALL HELPERS
+=========================================================== */
+
+function escapeHTML(text){
+
+    return String(text)
+
+        .replace(/&/g,"&amp;")
+
+        .replace(/</g,"&lt;")
+
+        .replace(/>/g,"&gt;")
+
+        .replace(/"/g,"&quot;")
+
+        .replace(/'/g,"&#039;");
+
+}
+
+function normalise(text){
+
+    return String(text)
+
+        .trim()
+
+        .toUpperCase()
+
+        .replace(/\s+/g,"");
+
+}
+
+function formatTimeRange(start,end){
+
+    return start+" - "+end;
+
+}
+
+/* ===========================================================
+   END OF APPLICATION
+=========================================================== */
+
 </script>
+
 </body>
+
 </html>
