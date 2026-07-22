@@ -365,7 +365,21 @@ td{
     text-align:center;
     border:1px solid #000;
 }
-    
+
+/* Subject and detailed venue columns */
+
+.subject-cell{
+    white-space:normal;
+    min-width:280px;
+    line-height:1.4;
+}
+
+.venue-cell{
+    white-space:normal;
+    min-width:180px;
+    line-height:1.4;
+}
+
 </style>
 
 </head>
@@ -442,8 +456,6 @@ Print
 
 <div class="validation" id="validationBox"></div>
 
-<div class="success" id="successBox"></div>
-
 </div>
 
 <div class="info-bar">
@@ -468,6 +480,8 @@ Loading...
 
 </div>
 
+<div class="success" id="successBox"></div>    
+    
 </div>
 
 <script>
@@ -517,6 +531,12 @@ let timeColumns = [];
 let examHeader = [];
 
 let examSections = [];
+
+let examPapers = [];
+
+let dutyDetailsIndex = Object.create(null);
+
+let dutyVenueIndex = Object.create(null);
 
 /* ===========================================================
    INITIALIZATION
@@ -668,10 +688,14 @@ async function loadCSV(day){
 
         parseTeacherSection();
 
-        parseExamSection();
+parseExamSection();
 
-        buildTeacherSchedules();
+parseExamPaperIndex();
 
+parseDetailedDutySection();
+
+buildTeacherSchedules();
+        
         showSuccess(
             teacherNames.length+
             " teachers indexed • "+
@@ -743,6 +767,12 @@ function resetData(){
     examSchedule=[];
 
     examSections=[];
+
+    examPapers=[];
+
+dutyDetailsIndex=Object.create(null);
+
+dutyVenueIndex=Object.create(null);
 
     timeSlots=[];
 
@@ -974,18 +1004,39 @@ function buildTeacherSchedules(){
 
             }
 
-            duties.push({
+const detail=findDutyDetail(
 
-                start:slot.start,
+    name,
 
-                end:slot.end,
+    slot.start,
 
-                venue:value,
+    slot.end
 
-                nextInvigilator:"",
-                column:slot.column
+);
 
-            });
+duties.push({
+
+    start:slot.start,
+
+    end:slot.end,
+
+    venue:value,
+
+    detailedVenue:detail
+        ? detail.venue
+        : value,
+
+    subject:detail
+        ? detail.subject
+        : "Paper not identified",
+
+    hasDetail:Boolean(detail),
+
+    nextInvigilator:"",
+
+    column:slot.column
+
+});
 
         });
 
@@ -1017,11 +1068,21 @@ function mergeConsecutiveDuties(duties){
 
         const next=duties[i];
 
-if(current.venue === next.venue){
+if(
 
-    current.end = next.end;
+    current.venue===next.venue &&
 
-    current.column = next.column;
+    current.detailedVenue===
+    next.detailedVenue &&
+
+    current.subject===
+    next.subject
+
+){
+
+    current.end=next.end;
+
+    current.column=next.column;
 
 }
 
@@ -1047,19 +1108,43 @@ if(current.venue === next.venue){
 
 function attachNextInvigilators(){
 
-    Object.keys(teacherSchedules).forEach(name=>{
+    Object.keys(teacherSchedules)
+        .forEach(name=>{
 
-        teacherSchedules[name].forEach(duty=>{
+            teacherSchedules[name]
+                .forEach(duty=>{
 
-            duty.nextInvigilator=
-                findNextInvigilator(
-                    duty.venue,
-                    duty.column
-                );
+                    if(duty.hasDetail){
+
+                        duty.nextInvigilator=
+                            findDetailedNextInvigilator(
+
+                                duty.detailedVenue,
+
+                                duty.end,
+
+                                name
+
+                            );
+
+                    }
+
+                    else{
+
+                        duty.nextInvigilator=
+                            findNextInvigilator(
+
+                                duty.venue,
+
+                                duty.column
+
+                            );
+
+                    }
+
+                });
 
         });
-
-    });
 
 }
 
@@ -1315,21 +1400,31 @@ function levenshtein(a,b){
 
 function displayTeacherSchedule(name){
 
-    const head=document.getElementById("tableHead");
+    const head=document.getElementById(
+        "tableHead"
+    );
 
-    const body=document.getElementById("tableBody");
+    const body=document.getElementById(
+        "tableBody"
+    );
 
     const duties=teacherSchedules[name]||[];
 
-    document.getElementById("resultTitle").textContent=
-        "Results for "+name;
+    document.getElementById(
+        "resultTitle"
+    ).textContent="Results for "+name;
 
     if(duties.length===0){
 
         head.innerHTML="";
 
-        body.innerHTML=
-        "<tr><td>No invigilation duties found.</td></tr>";
+        body.innerHTML=`
+            <tr>
+                <td colspan="4">
+                    No invigilation duties found.
+                </td>
+            </tr>
+        `;
 
         return;
 
@@ -1338,7 +1433,8 @@ function displayTeacherSchedule(name){
     head.innerHTML=`
         <tr>
             <th>Time</th>
-            <th>Venue</th>
+            <th>Subject Paper</th>
+            <th>Venue / Class</th>
             <th>Next Invigilator</th>
         </tr>
     `;
@@ -1347,11 +1443,30 @@ function displayTeacherSchedule(name){
 
         <tr>
 
-            <td>${d.start} - ${d.end}</td>
+            <td>
+                ${escapeHTML(
+                    formatTimeRange(
+                        d.start,
+                        d.end
+                    )
+                )}
+            </td>
 
-            <td>${d.venue}</td>
+            <td class="subject-cell">
+                ${escapeHTML(d.subject)}
+            </td>
 
-            <td>${d.nextInvigilator}</td>
+            <td class="venue-cell">
+                ${escapeHTML(
+                    d.detailedVenue
+                )}
+            </td>
+
+            <td>
+                ${escapeHTML(
+                    d.nextInvigilator
+                )}
+            </td>
 
         </tr>
 
@@ -1600,6 +1715,793 @@ function parseExamSection(){
    DISPLAY EXAM SCHEDULE
 =========================================================== */
 
+/* ===========================================================
+   EXAM PAPER AND DETAILED DUTY INDEX
+=========================================================== */
+
+function cleanCSVCell(value){
+
+    return String(value||"")
+        .replace(/\s+/g," ")
+        .trim();
+
+}
+
+function getSessionBands(row){
+
+    const bands=[];
+
+    let column=0;
+
+    while(column<row.length){
+
+        const title=cleanCSVCell(row[column]);
+
+        if(!title.toUpperCase().startsWith("SESSION")){
+
+            column++;
+
+            continue;
+
+        }
+
+        const start=column;
+
+        column++;
+
+        while(
+
+            column<row.length &&
+
+            cleanCSVCell(row[column]).toUpperCase()===
+            title.toUpperCase()
+
+        ){
+
+            column++;
+
+        }
+
+        bands.push({
+
+            title:title,
+
+            start:start,
+
+            end:column-1
+
+        });
+
+    }
+
+    return bands;
+
+}
+
+function timeToMinutes(value){
+
+    const match=String(value||"")
+        .match(/(\d{1,2}):(\d{2})/);
+
+    if(!match){
+
+        return -1;
+
+    }
+
+    return Number(match[1])*60+Number(match[2]);
+
+}
+
+function extractClassCodes(value){
+
+    return [
+
+        ...new Set(
+
+            String(value||"")
+                .toUpperCase()
+                .match(/\b4[A-Z]{2,4}\b/g)||[]
+
+        )
+
+    ];
+
+}
+
+function extractRoomCode(value){
+
+    const match=String(value||"")
+        .toUpperCase()
+        .match(/\b[A-Z]\d{3}\b/);
+
+    return match ? match[0] : "";
+
+}
+
+/* Read the official examination papers */
+
+function parseExamPaperIndex(){
+
+    examPapers=[];
+
+    let sessionRow=-1;
+
+    for(let r=0;r<teacherRow;r++){
+
+        const hasSession=rawCSV[r].some(cell=>
+
+            cleanCSVCell(cell)
+                .toUpperCase()
+                .startsWith("SESSION")
+
+        );
+
+        if(hasSession){
+
+            sessionRow=r;
+
+            break;
+
+        }
+
+    }
+
+    if(sessionRow===-1){
+
+        return;
+
+    }
+
+    const bands=getSessionBands(rawCSV[sessionRow]);
+
+    bands.forEach(band=>{
+
+        const headerCells=rawCSV[sessionRow+1]||[];
+
+        const headerMap=Object.create(null);
+
+        for(
+
+            let column=band.start;
+
+            column<=band.end;
+
+            column++
+
+        ){
+
+            const header=cleanCSVCell(
+                headerCells[column]
+            ).toUpperCase();
+
+            if(
+
+                header &&
+
+                headerMap[header]===undefined
+
+            ){
+
+                headerMap[header]=column;
+
+            }
+
+        }
+
+        let started=false;
+
+        for(
+
+            let r=sessionRow+2;
+
+            r<teacherRow;
+
+            r++
+
+        ){
+
+            const row=rawCSV[r]||[];
+
+            const hasData=row
+                .slice(band.start,band.end+1)
+                .some(cell=>cleanCSVCell(cell)!=="");
+
+            if(!hasData){
+
+                if(started){
+
+                    break;
+
+                }
+
+                continue;
+
+            }
+
+            started=true;
+
+            const timeText=cleanCSVCell(
+                row[headerMap["TIME"]]
+            );
+
+            const times=String(timeText)
+                .match(/\d{1,2}:\d{2}/g)||[];
+
+            if(times.length<2){
+
+                continue;
+
+            }
+
+            const subject=cleanCSVCell(
+                row[headerMap["SUBJECT"]]
+            );
+
+            const examVenue=cleanCSVCell(
+                row[headerMap["EXAM VENUE"]]
+            );
+
+            const aaRoom=cleanCSVCell(
+                row[headerMap["AA ROOM"]]
+            );
+
+            const aaEndText=cleanCSVCell(
+                row[headerMap["END TIME (AA ROOM)"]]
+            );
+
+            const aaTimes=String(aaEndText)
+                .match(/\d{1,2}:\d{2}/g)||[];
+
+            const end=timeToMinutes(times[1]);
+
+            examPapers.push({
+
+                session:band.title.toUpperCase(),
+
+                course:cleanCSVCell(row[0]),
+
+                subject:subject,
+
+                examVenue:examVenue,
+
+                aaRoom:aaRoom,
+
+                start:timeToMinutes(times[0]),
+
+                end:end,
+
+                aaEnd:aaTimes.length
+                    ? timeToMinutes(
+                        aaTimes[aaTimes.length-1]
+                    )
+                    : end,
+
+                classCodes:
+                    extractClassCodes(examVenue)
+
+            });
+
+        }
+
+    });
+
+}
+
+/* Read teacher names from the detailed duty table */
+
+function parseDetailedDutySection(){
+
+    dutyDetailsIndex=Object.create(null);
+
+    dutyVenueIndex=Object.create(null);
+
+    let detailRow=-1;
+
+    for(let r=0;r<teacherRow-3;r++){
+
+        const hasSession=rawCSV[r].some(cell=>
+
+            cleanCSVCell(cell)
+                .toUpperCase()
+                .startsWith("SESSION")
+
+        );
+
+        if(!hasSession){
+
+            continue;
+
+        }
+
+        const starts=rawCSV[r+2]||[];
+
+        const ends=rawCSV[r+3]||[];
+
+        let clockPairs=0;
+
+        const width=Math.max(
+            starts.length,
+            ends.length
+        );
+
+        for(let c=0;c<width;c++){
+
+            const startIsTime=
+                /^\d{1,2}:\d{2}$/.test(
+                    cleanCSVCell(starts[c])
+                );
+
+            const endIsTime=
+                /^\d{1,2}:\d{2}$/.test(
+                    cleanCSVCell(ends[c])
+                );
+
+            if(startIsTime && endIsTime){
+
+                clockPairs++;
+
+            }
+
+        }
+
+        if(clockPairs>=2){
+
+            detailRow=r;
+
+            break;
+
+        }
+
+    }
+
+    if(detailRow===-1){
+
+        return;
+
+    }
+
+    const bands=getSessionBands(
+        rawCSV[detailRow]
+    );
+
+    const startRow=rawCSV[detailRow+2]||[];
+
+    const endRow=rawCSV[detailRow+3]||[];
+
+    const detailEnd=Math.max(
+        detailRow+4,
+        teacherRow-2
+    );
+
+    bands.forEach(band=>{
+
+        const timeColumns=[];
+
+        for(
+
+            let column=band.start;
+
+            column<=band.end;
+
+            column++
+
+        ){
+
+            const startIsTime=
+                /^\d{1,2}:\d{2}$/.test(
+                    cleanCSVCell(startRow[column])
+                );
+
+            const endIsTime=
+                /^\d{1,2}:\d{2}$/.test(
+                    cleanCSVCell(endRow[column])
+                );
+
+            if(startIsTime && endIsTime){
+
+                timeColumns.push(column);
+
+            }
+
+        }
+
+        for(
+
+            let r=detailRow+4;
+
+            r<detailEnd;
+
+            r++
+
+        ){
+
+            const row=rawCSV[r]||[];
+
+            const detailedVenue=cleanCSVCell(
+                row[band.start]
+            );
+
+            if(!detailedVenue){
+
+                continue;
+
+            }
+
+            timeColumns.forEach(column=>{
+
+                const teacher=cleanCSVCell(
+                    row[column]
+                );
+
+                if(!teacher){
+
+                    return;
+
+                }
+
+                const start=cleanCSVCell(
+                    startRow[column]
+                );
+
+                const end=cleanCSVCell(
+                    endRow[column]
+                );
+
+                const subject=matchDutySubjects(
+
+                    band.title,
+
+                    detailedVenue,
+
+                    start,
+
+                    end
+
+                );
+
+                const dutyKey=makeDutyDetailKey(
+
+                    teacher,
+
+                    start,
+
+                    end
+
+                );
+
+                dutyDetailsIndex[dutyKey]={
+
+                    venue:detailedVenue,
+
+                    subject:subject
+
+                };
+
+                const venueKey=makeVenueSlotKey(
+
+                    detailedVenue,
+
+                    start
+
+                );
+
+                dutyVenueIndex[venueKey]=teacher;
+
+            });
+
+        }
+
+    });
+
+}
+
+/* Match a detailed duty with its examination paper */
+
+function matchDutySubjects(
+
+    session,
+
+    detailedVenue,
+
+    start,
+
+    end
+
+){
+
+    const venueCodes=
+        extractClassCodes(detailedVenue);
+
+    const venueRoom=
+        extractRoomCode(detailedVenue);
+
+    let candidates=examPapers.filter(paper=>{
+
+        if(
+
+            paper.session!==session.toUpperCase()
+
+        ){
+
+            return false;
+
+        }
+
+        const classMatch=venueCodes.some(code=>
+
+            paper.classCodes.includes(code)
+
+        );
+
+        const aaRoom=
+            extractRoomCode(paper.aaRoom);
+
+        const aaMatch=
+
+            aaRoom!=="" &&
+
+            !paper.aaRoom
+                .toUpperCase()
+                .includes("NO AA") &&
+
+            aaRoom===venueRoom;
+
+        return classMatch||aaMatch;
+
+    });
+
+    /* Use time to separate papers sharing an AA room */
+
+    if(candidates.length>1){
+
+        const slotStart=timeToMinutes(start);
+
+        const slotEnd=timeToMinutes(end);
+
+        const overlapping=candidates.filter(
+            paper=>{
+
+                const aaMatch=
+
+                    extractRoomCode(paper.aaRoom)===
+                    venueRoom &&
+
+                    !paper.aaRoom
+                        .toUpperCase()
+                        .includes("NO AA");
+
+                const paperEnd=aaMatch
+                    ? paper.aaEnd
+                    : paper.end;
+
+                return (
+
+                    slotStart<paperEnd &&
+
+                    slotEnd>paper.start
+
+                );
+
+            }
+        );
+
+        if(overlapping.length){
+
+            candidates=overlapping;
+
+        }
+
+    }
+
+    const subjects=candidates.map(paper=>
+
+        specialiseLanguageSubject(
+
+            paper.subject,
+
+            detailedVenue
+
+        )
+
+    );
+
+    return [
+
+        ...new Set(subjects)
+
+    ].join(" / ")||"Paper not identified";
+
+}
+
+/* Select Chinese, Malay or Tamil from a combined paper */
+
+function specialiseLanguageSubject(
+
+    subject,
+
+    detailedVenue
+
+){
+
+    const languageTypes=new Set();
+
+    extractClassCodes(detailedVenue)
+        .forEach(code=>{
+
+            if(/^4CL/.test(code)){
+
+                languageTypes.add("CHINESE");
+
+            }
+
+            if(/^4ML/.test(code)){
+
+                languageTypes.add("MALAY");
+
+            }
+
+            if(/^4TL/.test(code)){
+
+                languageTypes.add("TAMIL");
+
+            }
+
+        });
+
+    if(languageTypes.size!==1){
+
+        return subject;
+
+    }
+
+    const language=[...languageTypes][0];
+
+    const expression=new RegExp(
+
+        "((?:BASIC\\s+)?"+
+
+        language+
+
+        " LANGUAGE PAPER\\s+\\d+)",
+
+        "i"
+
+    );
+
+    const match=subject.match(expression);
+
+    if(!match){
+
+        return subject;
+
+    }
+
+    const notes=subject.match(
+        /\([^)]*\)/g
+    )||[];
+
+    return [
+
+        match[1],
+
+        ...notes
+
+    ].join(" ");
+
+}
+
+function makeDutyDetailKey(
+
+    teacher,
+
+    start,
+
+    end
+
+){
+
+    return (
+
+        normalise(teacher)+
+
+        "|"+
+
+        timeToMinutes(start)+
+
+        "|"+
+
+        timeToMinutes(end)
+
+    );
+
+}
+
+function makeVenueSlotKey(
+
+    venue,
+
+    start
+
+){
+
+    return (
+
+        normalise(venue)+
+
+        "|"+
+
+        timeToMinutes(start)
+
+    );
+
+}
+
+function findDutyDetail(
+
+    teacher,
+
+    start,
+
+    end
+
+){
+
+    const key=makeDutyDetailKey(
+
+        teacher,
+
+        start,
+
+        end
+
+    );
+
+    return dutyDetailsIndex[key]||null;
+
+}
+
+function findDetailedNextInvigilator(
+
+    venue,
+
+    end,
+
+    currentTeacher
+
+){
+
+    const key=makeVenueSlotKey(
+
+        venue,
+
+        end
+
+    );
+
+    const next=dutyVenueIndex[key];
+
+    if(!next){
+
+        return "-";
+
+    }
+
+    if(
+
+        normalise(next)===
+        normalise(currentTeacher)
+
+    ){
+
+        return "Continues";
+
+    }
+
+    return next;
+
+} 
+    
 function displayExamSchedule(){
 
     clearTable();
