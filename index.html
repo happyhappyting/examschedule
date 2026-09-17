@@ -272,7 +272,8 @@
 
       <div class="actions">
         <button id="findBtn" class="primary">Find My Duties</button>
-        <button id="clearBtn" class="outline">Clear</button>
+<button id="clearBtn" class="outline">Clear</button>
+<button id="refreshBtn" class="secondary">Refresh Live Data</button>
         <a class="action secondary"
            href="https://docs.google.com/spreadsheets/d/1fi80AzaVvbl1kqj2GbAsGl_1Uq8gJnyONLyJppGAqds/"
            target="_blank"
@@ -293,12 +294,61 @@ let dates = [];
 
 document.getElementById("findBtn").addEventListener("click", findDuties);
 document.getElementById("clearBtn").addEventListener("click", clearAll);
+
+document.getElementById("refreshBtn").addEventListener("click", async () => {
+  document.getElementById("status").textContent = "Refreshing live data...";
+  await loadData();
+});
 document.getElementById("teacherInput").addEventListener("keydown", e => {
   if (e.key === "Enter") findDuties();
 });
 
-loadData();
-setInterval(loadData, 300000);
+const CACHE_KEY = "examDutyPortalData";
+const CACHE_DATE_KEY = "examDutyPortalCacheDate";
+
+async function initialLoad() {
+  const now = new Date();
+
+  if (now.getHours() < 8) {
+    await loadData();
+    return;
+  }
+
+  const cached = localStorage.getItem(CACHE_KEY);
+  const cachedDate = localStorage.getItem(CACHE_DATE_KEY);
+
+  if (cached && cachedDate === todayKey()) {
+    try {
+      data = JSON.parse(cached);
+
+      duties = Array.isArray(data.duties) ? data.duties : [];
+      teacherGroups = Array.isArray(data.teachers) ? data.teachers : [];
+      dates = Array.isArray(data.dates) ? data.dates : [];
+
+      populateTeachers();
+      populateDates();
+
+      document.getElementById("status").textContent =
+        `Saved data · ${data.dutyBlockCount ?? duties.length} duty blocks · Updated ${formatDateTime(data.generatedAt)}`;
+
+      return;
+    } catch (e) {
+      console.error("Cache read failed:", e);
+    }
+  }
+
+  await loadData();
+}
+
+function todayKey() {
+  const d = new Date();
+
+  return [
+    d.getFullYear(),
+    String(d.getMonth() + 1).padStart(2, "0"),
+    String(d.getDate()).padStart(2, "0")
+  ].join("-");
+}
 
 async function loadData() {
   const status = document.getElementById("status");
@@ -311,6 +361,10 @@ async function loadData() {
     }
 
     data = await response.json();
+
+    localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+    localStorage.setItem(CACHE_DATE_KEY, todayKey());
+
     duties = Array.isArray(data.duties) ? data.duties : [];
     teacherGroups = Array.isArray(data.teachers) ? data.teachers : [];
     dates = Array.isArray(data.dates) ? data.dates : [];
@@ -320,13 +374,18 @@ async function loadData() {
 
     status.textContent =
       `Live data · ${data.dutyBlockCount ?? duties.length} duty blocks · Updated ${formatDateTime(data.generatedAt)}`;
+
   } catch (error) {
     console.error(error);
+
     status.textContent = "Unable to load live duty data.";
+
     document.getElementById("results").innerHTML =
       '<div class="empty">Duty data could not be loaded. Please refresh later.</div>';
   }
 }
+
+initialLoad();
 
 function populateTeachers() {
   const list = document.getElementById("teacherList");
