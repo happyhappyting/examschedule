@@ -516,16 +516,63 @@ function resolveGroupName(input) {
 }
 
 function nearestGroups(input, limit) {
-  const normalized = normalizeName(input);
+  const query = normalizeName(input);
+
+  if (!query) return [];
 
   return teacherGroups
-    .map(group => ({
-      name: group.name,
-      score: levenshtein(normalized, normalizeName(group.name))
-    }))
-    .sort((a, b) => a.score - b.score || a.name.localeCompare(b.name))
+    .filter(group => isSearchableTeacherName(group.name))
+    .map(group => {
+      const name = normalizeName(group.name);
+      const words = name.split(" ").filter(Boolean);
+
+      let rank = 5;
+      let score = levenshtein(query, name);
+
+      if (name === query) {
+        rank = 0;
+        score = 0;
+      } else if (name.startsWith(query)) {
+        rank = 1;
+        score = name.length - query.length;
+      } else if (words.some(word => word.startsWith(query))) {
+        rank = 2;
+        score = Math.min(
+          ...words
+            .filter(word => word.startsWith(query))
+            .map(word => word.length - query.length)
+        );
+      } else if (name.includes(query)) {
+        rank = 3;
+        score = name.indexOf(query);
+      } else if (query.includes(name)) {
+        rank = 4;
+        score = query.length - name.length;
+      }
+
+      return {
+        name: group.name,
+        rank,
+        score
+      };
+    })
+    .sort((a, b) =>
+      a.rank - b.rank ||
+      a.score - b.score ||
+      a.name.localeCompare(b.name)
+    )
     .slice(0, limit)
     .map(x => x.name);
+}
+
+function isSearchableTeacherName(value) {
+  const s = normalizeName(value);
+
+  if (!s) return false;
+
+  if (!/[a-z]/i.test(s)) return false;
+
+  return true;
 }
 
 function chooseTeacher(name) {
