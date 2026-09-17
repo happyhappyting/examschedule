@@ -6,16 +6,16 @@
   <title>SAS(S) Exam Duty Portal</title>
   <style>
     :root {
-      --bg: #f4f6f8;
+      --navy: #17365d;
+      --navy2: #244a76;
+      --yellow: #ffd966;
+      --yellow2: #fff2cc;
+      --bg: #eef2f7;
       --card: #ffffff;
       --text: #1f2937;
       --muted: #6b7280;
-      --line: #d1d5db;
-      --accent: #1f4e78;
-      --accent-soft: #eaf2f8;
-      --start: #fff4cc;
-      --end: #e8f5e9;
-      --danger: #fef2f2;
+      --line: #cbd5e1;
+      --green: #e2f0d9;
     }
 
     * { box-sizing: border-box; }
@@ -27,85 +27,103 @@
       color: var(--text);
     }
 
-    .container {
-      max-width: 1100px;
-      margin: 0 auto;
+    .header {
+      background: var(--navy);
+      color: white;
       padding: 20px;
+      border-bottom: 6px solid var(--yellow);
     }
 
-    header {
-      margin-bottom: 18px;
+    .header-inner {
+      max-width: 980px;
+      margin: auto;
     }
 
     h1 {
       margin: 0 0 6px;
       font-size: 1.8rem;
-      color: var(--accent);
     }
 
     .status {
-      color: var(--muted);
       font-size: 0.9rem;
+      opacity: 0.9;
+    }
+
+    .container {
+      max-width: 980px;
+      margin: auto;
+      padding: 18px;
     }
 
     .panel {
       background: var(--card);
-      border: 1px solid var(--line);
       border-radius: 12px;
-      padding: 16px;
-      margin-bottom: 18px;
+      padding: 18px;
+      margin-bottom: 16px;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.08);
     }
 
     .controls {
       display: grid;
-      grid-template-columns: 1fr 1fr auto auto;
-      gap: 10px;
-      align-items: end;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
     }
 
     label {
       display: block;
       margin-bottom: 6px;
       font-weight: 700;
-      font-size: 0.9rem;
+      color: var(--navy);
     }
 
-    input, select, button {
+    input, select, button, a.action {
       width: 100%;
-      min-height: 42px;
+      min-height: 44px;
       border-radius: 8px;
-      border: 1px solid var(--line);
       font-size: 1rem;
     }
 
     input, select {
-      padding: 8px 10px;
+      border: 1px solid var(--line);
+      padding: 9px 11px;
       background: white;
     }
 
-    button {
-      padding: 8px 14px;
-      cursor: pointer;
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    button, a.action {
+      border: none;
+      padding: 10px 14px;
       font-weight: 700;
-      background: var(--accent);
+      cursor: pointer;
+      text-align: center;
+      text-decoration: none;
+    }
+
+    .primary {
+      background: var(--yellow);
+      color: var(--navy);
+    }
+
+    .secondary {
+      background: var(--navy);
       color: white;
-      border-color: var(--accent);
     }
 
-    button.secondary {
+    .outline {
       background: white;
-      color: var(--accent);
+      color: var(--navy);
+      border: 1px solid var(--navy);
     }
 
-    .view-tabs {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 14px;
-      flex-wrap: wrap;
-    }
-
-    .view-tabs button {
-      width: auto;
+    .result-title {
+      color: var(--navy);
+      margin: 22px 0 10px;
     }
 
     .cards {
@@ -113,15 +131,20 @@
       gap: 12px;
     }
 
-    .duty-card {
-      background: var(--card);
-      border: 1px solid var(--line);
-      border-left: 6px solid var(--accent);
+    .card {
+      background: white;
       border-radius: 10px;
-      padding: 14px;
+      border-left: 7px solid var(--navy);
+      padding: 14px 16px;
+      box-shadow: 0 2px 7px rgba(0,0,0,0.07);
     }
 
-    .duty-head {
+    .card.start {
+      border-left-color: #d6a700;
+      background: #fffdf4;
+    }
+
+    .card-head {
       display: flex;
       justify-content: space-between;
       gap: 12px;
@@ -129,82 +152,86 @@
       margin-bottom: 8px;
     }
 
-    .teacher {
-      font-weight: 700;
+    .teacher-raw {
       font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--navy);
     }
 
     .time {
       font-weight: 700;
-      color: var(--accent);
+      color: var(--navy);
     }
 
     .meta {
       display: flex;
-      gap: 10px 16px;
       flex-wrap: wrap;
-      color: var(--muted);
+      gap: 8px 16px;
+      color: #4b5563;
       font-size: 0.92rem;
     }
 
     .badge {
       display: inline-block;
-      padding: 3px 8px;
+      margin-top: 9px;
+      padding: 4px 9px;
       border-radius: 999px;
       font-size: 0.78rem;
       font-weight: 700;
+    }
+
+    .badge-start {
+      background: var(--yellow);
+      color: var(--navy);
+    }
+
+    .badge-end {
+      background: var(--green);
+      color: #335c21;
+    }
+
+    .badge-both {
+      background: #e8def8;
+      color: #56328c;
+    }
+
+    .variant {
       margin-top: 8px;
+      display: inline-block;
+      background: var(--yellow2);
+      border: 1px solid #e6c85c;
+      color: #6b5600;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 0.8rem;
     }
 
-    .badge.start {
-      background: var(--start);
-      color: #7c5a00;
-    }
-
-    .badge.end {
-      background: var(--end);
-      color: #256029;
-    }
-
-    .badge.both {
-      background: #ede9fe;
-      color: #5b21b6;
+    .next {
+      margin-top: 8px;
+      font-size: 0.92rem;
     }
 
     .empty {
-      background: var(--card);
+      background: white;
       border: 1px dashed var(--line);
       border-radius: 10px;
       padding: 18px;
       color: var(--muted);
     }
 
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      background: white;
+    .suggestions {
+      margin-top: 10px;
     }
 
-    th, td {
-      border: 1px solid var(--line);
-      padding: 8px;
-      text-align: left;
-      vertical-align: top;
-      font-size: 0.9rem;
+    .suggestions button {
+      width: auto;
+      margin: 4px 4px 0 0;
+      min-height: 36px;
+      padding: 6px 10px;
     }
 
-    th {
-      background: var(--accent-soft);
-      position: sticky;
-      top: 0;
-    }
-
-    .hidden {
-      display: none !important;
-    }
-
-    @media (max-width: 760px) {
-      .controls {
+    @media (max-width: 700px) {
+      .controls, .actions {
         grid-template-columns: 1fr;
       }
 
@@ -216,39 +243,22 @@
         font-size: 1.45rem;
       }
     }
-
-    @media print {
-      body {
-        background: white;
-      }
-
-      .controls, .view-tabs, .status {
-        display: none !important;
-      }
-
-      .panel {
-        border: none;
-        padding: 0;
-      }
-
-      .duty-card {
-        break-inside: avoid;
-      }
-    }
   </style>
 </head>
 <body>
-  <div class="container">
-    <header>
+  <div class="header">
+    <div class="header-inner">
       <h1>SAS(S) Exam Duty Portal</h1>
       <div id="status" class="status">Loading live duty data...</div>
-    </header>
+    </div>
+  </div>
 
+  <div class="container">
     <section class="panel">
       <div class="controls">
         <div>
-          <label for="teacherInput">Teacher</label>
-          <input id="teacherInput" list="teacherList" placeholder="Type teacher name">
+          <label for="teacherInput">Teacher Name</label>
+          <input id="teacherInput" list="teacherList" placeholder="Type your name">
           <datalist id="teacherList"></datalist>
         </div>
 
@@ -258,39 +268,37 @@
             <option value="">All dates</option>
           </select>
         </div>
+      </div>
 
-        <button id="findBtn">Find Duties</button>
-        <button id="clearBtn" class="secondary">Clear</button>
+      <div class="actions">
+        <button id="findBtn" class="primary">Find My Duties</button>
+        <button id="clearBtn" class="outline">Clear</button>
+        <a class="action secondary"
+           href="https://docs.google.com/spreadsheets/d/1fi80AzaVvbl1kqj2GbAsGl_1Uq8gJnyONLyJppGAqds/"
+           target="_blank"
+           rel="noopener noreferrer">Exam Schedule</a>
       </div>
     </section>
 
-    <div class="view-tabs">
-      <button id="myViewBtn">Teacher View</button>
-      <button id="masterViewBtn" class="secondary">Full Master View</button>
-      <button id="printBtn" class="secondary">Print</button>
-    </div>
-
-    <section id="teacherView"></section>
-    <section id="masterView" class="hidden"></section>
+    <section id="results"></section>
   </div>
 
 <script>
-const API_URL = 'https://script.google.com/macros/s/AKfycbxhCKbxEUuVRZ4INGBRbFgutlJ8COVKuzbz1QSHN-OatjsnYAtAuzZg7v1b3sVeyDQ2Sg/exec';
+const API_URL = "https://script.google.com/macros/s/AKfycbxhCKbxEUuVRZ4INGBRbFgutlJ8COVKuzbz1QSHN-OatjsnYAtAuzZg7v1b3sVeyDQ2Sg/exec";
 
-let apiData = null;
+let data = null;
 let duties = [];
-let teachers = [];
+let teacherGroups = [];
 let dates = [];
-let currentTeacher = "";
-let currentDate = "";
 
-document.getElementById("findBtn").addEventListener("click", showTeacherView);
-document.getElementById("clearBtn").addEventListener("click", clearFilters);
-document.getElementById("myViewBtn").addEventListener("click", () => switchView("teacher"));
-document.getElementById("masterViewBtn").addEventListener("click", () => switchView("master"));
-document.getElementById("printBtn").addEventListener("click", () => window.print());
+document.getElementById("findBtn").addEventListener("click", findDuties);
+document.getElementById("clearBtn").addEventListener("click", clearAll);
+document.getElementById("teacherInput").addEventListener("keydown", e => {
+  if (e.key === "Enter") findDuties();
+});
 
 loadData();
+setInterval(loadData, 300000);
 
 async function loadData() {
   const status = document.getElementById("status");
@@ -302,39 +310,39 @@ async function loadData() {
       throw new Error("HTTP " + response.status);
     }
 
-    apiData = await response.json();
-    duties = Array.isArray(apiData.duties) ? apiData.duties : [];
-    teachers = Array.isArray(apiData.teachers) ? apiData.teachers : uniqueSorted(duties.map(d => d.teacher));
-    dates = Array.isArray(apiData.dates) ? apiData.dates : uniqueInOrder(duties.map(d => d.dateLabel));
+    data = await response.json();
+    duties = Array.isArray(data.duties) ? data.duties : [];
+    teacherGroups = Array.isArray(data.teachers) ? data.teachers : [];
+    dates = Array.isArray(data.dates) ? data.dates : [];
 
-    populateTeacherList();
-    populateDateList();
+    populateTeachers();
+    populateDates();
 
     status.textContent =
-      `Live data loaded · ${apiData.dutyBlockCount ?? duties.length} duty blocks · Updated ${formatGeneratedTime(apiData.generatedAt)}`;
-
-    renderEmptyTeacherView();
+      `Live data · ${data.dutyBlockCount ?? duties.length} duty blocks · Updated ${formatDateTime(data.generatedAt)}`;
   } catch (error) {
     console.error(error);
-    status.textContent = "Failed to load live duty data.";
-    document.getElementById("teacherView").innerHTML =
-      '<div class="empty">Unable to load exam duty data. Please refresh the page later.</div>';
+    status.textContent = "Unable to load live duty data.";
+    document.getElementById("results").innerHTML =
+      '<div class="empty">Duty data could not be loaded. Please refresh later.</div>';
   }
 }
 
-function populateTeacherList() {
+function populateTeachers() {
   const list = document.getElementById("teacherList");
   list.innerHTML = "";
 
-  teachers.forEach(name => {
+  teacherGroups.forEach(group => {
     const option = document.createElement("option");
-    option.value = name;
+    option.value = group.name;
     list.appendChild(option);
   });
 }
 
-function populateDateList() {
+function populateDates() {
   const select = document.getElementById("dateSelect");
+  const current = select.value;
+
   select.innerHTML = '<option value="">All dates</option>';
 
   dates.forEach(date => {
@@ -343,245 +351,210 @@ function populateDateList() {
     option.textContent = date;
     select.appendChild(option);
   });
+
+  if (dates.includes(current)) {
+    select.value = current;
+  }
 }
 
-function showTeacherView() {
-  const typedName = document.getElementById("teacherInput").value;
+function findDuties() {
+  const input = document.getElementById("teacherInput").value;
   const date = document.getElementById("dateSelect").value;
+  const groupName = resolveGroupName(input);
 
-  currentTeacher = resolveTeacherName(typedName);
-  currentDate = date;
-
-  switchView("teacher");
-
-  if (!typedName.trim()) {
-    renderEmptyTeacherView("Enter a teacher name.");
+  if (!input.trim()) {
+    showMessage("Enter a teacher name.");
     return;
   }
 
-  if (!currentTeacher) {
-    const suggestions = nearestTeachers(typedName, 5);
+  if (!groupName) {
+    const suggestions = nearestGroups(input, 5);
 
     let html = '<div class="empty">No exact teacher match found.';
 
     if (suggestions.length) {
-      html += '<br><br>Closest matches:<br>' +
+      html += '<div class="suggestions"><strong>Did you mean:</strong><br>' +
         suggestions.map(name =>
-          `<button class="secondary" style="width:auto;margin:4px" onclick="selectSuggestion('${escapeJs(name)}')">${escapeHtml(name)}</button>`
-        ).join("");
+          `<button class="outline" onclick="chooseTeacher('${escapeJs(name)}')">${escapeHtml(name)}</button>`
+        ).join("") +
+        '</div>';
     }
 
     html += '</div>';
-    document.getElementById("teacherView").innerHTML = html;
+    document.getElementById("results").innerHTML = html;
     return;
   }
 
-  const filtered = duties
-    .filter(d => d.teacher === currentTeacher)
-    .filter(d => !currentDate || d.dateLabel === currentDate)
+  document.getElementById("teacherInput").value = groupName;
+
+  const items = duties
+    .filter(d => d.teacherGroup === groupName)
+    .filter(d => !date || d.dateLabel === date)
     .sort(compareDuties);
 
-  renderDutyCards(filtered, currentTeacher);
+  renderTeacherDuties(groupName, items);
 }
 
-function selectSuggestion(name) {
-  document.getElementById("teacherInput").value = name;
-  showTeacherView();
-}
-
-function renderDutyCards(items, teacherName) {
-  const container = document.getElementById("teacherView");
-
+function renderTeacherDuties(groupName, items) {
   if (!items.length) {
-    container.innerHTML =
-      `<div class="empty">No duties found for ${escapeHtml(teacherName)}${currentDate ? " on " + escapeHtml(currentDate) : ""}.</div>`;
+    showMessage(`No duties found for ${groupName}.`);
     return;
   }
 
   const grouped = groupBy(items, d => d.dateLabel);
-
   let html = "";
 
   Object.keys(grouped).forEach(date => {
-    html += `<h2>${escapeHtml(date)}</h2><div class="cards">`;
+    html += `<h2 class="result-title">${escapeHtml(date)}</h2><div class="cards">`;
 
     grouped[date].forEach(duty => {
-      html += dutyCardHtml(duty);
+      const next = getNextInvigilator(duty);
+      const variant = duty.teacherRaw !== duty.teacherGroup;
+      const classes = duty.startPaper ? "card start" : "card";
+
+      html += `
+        <div class="${classes}">
+          <div class="card-head">
+            <div class="teacher-raw">${escapeHtml(duty.teacherRaw)}</div>
+            <div class="time">${escapeHtml(duty.startTime)}–${escapeHtml(duty.endTime)}</div>
+          </div>
+
+          <div class="meta">
+            <span><strong>Venue:</strong> ${escapeHtml(duty.venue || "")}</span>
+            <span><strong>TG:</strong> ${escapeHtml(duty.tg || "")}</span>
+            <span><strong>Duty Stage:</strong> ${escapeHtml(stageText(duty))}</span>
+          </div>
+
+          <div class="next"><strong>Next Invigilator:</strong> ${escapeHtml(next)}</div>
+
+          ${stageBadge(duty)}
+
+          ${variant
+            ? `<div class="variant">Name in ALLOC: ${escapeHtml(duty.teacherRaw)} · grouped under ${escapeHtml(duty.teacherGroup)}</div>`
+            : ""}
+        </div>
+      `;
     });
 
     html += "</div>";
   });
 
-  container.innerHTML = html;
+  document.getElementById("results").innerHTML = html;
 }
 
-function dutyCardHtml(duty) {
-  const badge = dutyBadgeHtml(duty);
+function getNextInvigilator(duty) {
+  const candidates = duties.filter(d =>
+    d.dateLabel === duty.dateLabel &&
+    d.venue === duty.venue &&
+    d.tg === duty.tg &&
+    d.startTime === duty.endTime
+  );
 
-  return `
-    <div class="duty-card">
-      <div class="duty-head">
-        <div class="teacher">${escapeHtml(duty.teacher)}</div>
-        <div class="time">${escapeHtml(duty.startTime)}–${escapeHtml(duty.endTime)}</div>
-      </div>
-      <div class="meta">
-        <span><strong>Venue:</strong> ${escapeHtml(duty.venue || "")}</span>
-        <span><strong>TG:</strong> ${escapeHtml(duty.tg || "")}</span>
-        <span><strong>Periods:</strong> ${escapeHtml(String(duty.periodCount ?? ""))}</span>
-      </div>
-      ${badge}
-    </div>
-  `;
+  if (!candidates.length) {
+    return "-";
+  }
+
+  const uniqueGroups = [...new Set(candidates.map(d => d.teacherGroup))];
+
+  if (uniqueGroups.length === 1 && uniqueGroups[0] === duty.teacherGroup) {
+    return "Continues";
+  }
+
+  const names = [];
+
+  candidates.forEach(d => {
+    if (!names.includes(d.teacherRaw)) {
+      names.push(d.teacherRaw);
+    }
+  });
+
+  return names.join(" / ");
 }
 
-function dutyBadgeHtml(duty) {
+function stageText(duty) {
+  if (duty.startPaper && duty.endPaper) return "Start & End";
+  if (duty.startPaper) return "Start";
+  if (duty.endPaper) return "End";
+  return "—";
+}
+
+function stageBadge(duty) {
   if (duty.startPaper && duty.endPaper) {
-    return '<span class="badge both">Start & End Paper</span>';
+    return '<span class="badge badge-both">Start & End Paper</span>';
   }
 
   if (duty.startPaper) {
-    return '<span class="badge start">Start Paper</span>';
+    return '<span class="badge badge-start">Start Paper</span>';
   }
 
   if (duty.endPaper) {
-    return '<span class="badge end">End Paper</span>';
+    return '<span class="badge badge-end">End Paper</span>';
   }
 
   return "";
 }
 
-function switchView(view) {
-  const teacherView = document.getElementById("teacherView");
-  const masterView = document.getElementById("masterView");
-  const myBtn = document.getElementById("myViewBtn");
-  const masterBtn = document.getElementById("masterViewBtn");
-
-  if (view === "master") {
-    teacherView.classList.add("hidden");
-    masterView.classList.remove("hidden");
-    myBtn.classList.add("secondary");
-    masterBtn.classList.remove("secondary");
-    renderMasterView();
-  } else {
-    masterView.classList.add("hidden");
-    teacherView.classList.remove("hidden");
-    masterBtn.classList.add("secondary");
-    myBtn.classList.remove("secondary");
-  }
-}
-
-function renderMasterView() {
-  const container = document.getElementById("masterView");
-  const date = document.getElementById("dateSelect").value;
-
-  const items = duties
-    .filter(d => !date || d.dateLabel === date)
-    .sort(compareDuties);
-
-  if (!items.length) {
-    container.innerHTML = '<div class="empty">No duties found.</div>';
-    return;
-  }
-
-  let html = `
-    <div style="overflow:auto">
-      <table>
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Time</th>
-            <th>Teacher</th>
-            <th>Venue</th>
-            <th>TG</th>
-            <th>Stage</th>
-          </tr>
-        </thead>
-        <tbody>
-  `;
-
-  items.forEach(d => {
-    let stage = "";
-
-    if (d.startPaper && d.endPaper) stage = "Start & End";
-    else if (d.startPaper) stage = "Start";
-    else if (d.endPaper) stage = "End";
-
-    html += `
-      <tr>
-        <td>${escapeHtml(d.dateLabel)}</td>
-        <td>${escapeHtml(d.startTime)}–${escapeHtml(d.endTime)}</td>
-        <td>${escapeHtml(d.teacher)}</td>
-        <td>${escapeHtml(d.venue || "")}</td>
-        <td>${escapeHtml(d.tg || "")}</td>
-        <td>${stage}</td>
-      </tr>
-    `;
-  });
-
-  html += "</tbody></table></div>";
-  container.innerHTML = html;
-}
-
-function clearFilters() {
-  document.getElementById("teacherInput").value = "";
-  document.getElementById("dateSelect").value = "";
-  currentTeacher = "";
-  currentDate = "";
-  switchView("teacher");
-  renderEmptyTeacherView();
-}
-
-function renderEmptyTeacherView(message = "Enter a teacher name to view duties.") {
-  document.getElementById("teacherView").innerHTML =
-    `<div class="empty">${escapeHtml(message)}</div>`;
-}
-
-function resolveTeacherName(input) {
+function resolveGroupName(input) {
   const raw = String(input || "");
-  if (!raw) return "";
+  const normalized = normalizeName(raw);
 
-  const exact = teachers.find(name => name === raw);
-  if (exact) return exact;
+  for (const group of teacherGroups) {
+    if (normalizeName(group.name) === normalized) {
+      return group.name;
+    }
 
-  const lower = raw.toLowerCase();
-  const ciExact = teachers.find(name => name.toLowerCase() === lower);
-  return ciExact || "";
+    if (Array.isArray(group.variants)) {
+      for (const variant of group.variants) {
+        if (normalizeName(variant) === normalized) {
+          return group.name;
+        }
+      }
+    }
+  }
+
+  return "";
 }
 
-function nearestTeachers(input, limit) {
-  const raw = String(input || "").trim().toLowerCase();
-  if (!raw) return [];
+function nearestGroups(input, limit) {
+  const normalized = normalizeName(input);
 
-  return teachers
-    .map(name => ({
-      name,
-      score: levenshtein(raw, name.toLowerCase())
+  return teacherGroups
+    .map(group => ({
+      name: group.name,
+      score: levenshtein(normalized, normalizeName(group.name))
     }))
     .sort((a, b) => a.score - b.score || a.name.localeCompare(b.name))
     .slice(0, limit)
     .map(x => x.name);
 }
 
-function compareDuties(a, b) {
-  const dateOrderA = dates.indexOf(a.dateLabel);
-  const dateOrderB = dates.indexOf(b.dateLabel);
+function chooseTeacher(name) {
+  document.getElementById("teacherInput").value = name;
+  findDuties();
+}
 
-  if (dateOrderA !== dateOrderB) {
-    return dateOrderA - dateOrderB;
-  }
+function clearAll() {
+  document.getElementById("teacherInput").value = "";
+  document.getElementById("dateSelect").value = "";
+  document.getElementById("results").innerHTML = "";
+}
+
+function compareDuties(a, b) {
+  const dateA = dates.indexOf(a.dateLabel);
+  const dateB = dates.indexOf(b.dateLabel);
+
+  if (dateA !== dateB) return dateA - dateB;
 
   const timeA = timeToMinutes(a.startTime);
   const timeB = timeToMinutes(b.startTime);
 
-  if (timeA !== timeB) {
-    return timeA - timeB;
-  }
+  if (timeA !== timeB) return timeA - timeB;
 
   if ((a.venue || "") !== (b.venue || "")) {
     return String(a.venue || "").localeCompare(String(b.venue || ""));
   }
 
-  return String(a.teacher || "").localeCompare(String(b.teacher || ""));
+  return String(a.teacherRaw || "").localeCompare(String(b.teacherRaw || ""));
 }
 
 function timeToMinutes(value) {
@@ -600,6 +573,38 @@ function timeToMinutes(value) {
   return hour * 60 + minute;
 }
 
+function normalizeName(value) {
+  return String(value || "")
+    .replace(/\u00A0/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function levenshtein(a, b) {
+  const previous = Array.from({ length: b.length + 1 }, (_, i) => i);
+
+  for (let i = 1; i <= a.length; i++) {
+    const current = [i];
+
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+
+      current[j] = Math.min(
+        current[j - 1] + 1,
+        previous[j] + 1,
+        previous[j - 1] + cost
+      );
+    }
+
+    for (let j = 0; j <= b.length; j++) {
+      previous[j] = current[j];
+    }
+  }
+
+  return previous[b.length];
+}
+
 function groupBy(items, keyFn) {
   return items.reduce((acc, item) => {
     const key = keyFn(item);
@@ -608,47 +613,21 @@ function groupBy(items, keyFn) {
   }, {});
 }
 
-function uniqueSorted(items) {
-  return [...new Set(items.filter(Boolean))].sort();
+function showMessage(message) {
+  document.getElementById("results").innerHTML =
+    `<div class="empty">${escapeHtml(message)}</div>`;
 }
 
-function uniqueInOrder(items) {
-  return [...new Set(items.filter(Boolean))];
-}
-
-function levenshtein(a, b) {
-  const dp = Array.from({ length: a.length + 1 }, () =>
-    Array(b.length + 1).fill(0)
-  );
-
-  for (let i = 0; i <= a.length; i++) dp[i][0] = i;
-  for (let j = 0; j <= b.length; j++) dp[0][j] = j;
-
-  for (let i = 1; i <= a.length; i++) {
-    for (let j = 1; j <= b.length; j++) {
-      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-
-      dp[i][j] = Math.min(
-        dp[i - 1][j] + 1,
-        dp[i][j - 1] + 1,
-        dp[i - 1][j - 1] + cost
-      );
-    }
-  }
-
-  return dp[a.length][b.length];
-}
-
-function formatGeneratedTime(value) {
+function formatDateTime(value) {
   if (!value) return "now";
 
-  const d = new Date(value);
+  const date = new Date(value);
 
-  if (Number.isNaN(d.getTime())) {
+  if (Number.isNaN(date.getTime())) {
     return String(value);
   }
 
-  return d.toLocaleString();
+  return date.toLocaleString();
 }
 
 function escapeHtml(value) {
