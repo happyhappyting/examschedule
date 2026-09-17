@@ -1,1661 +1,670 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>SAS(S) Exam Portal</title>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-
-<style>
-
-:root{
-    --blue:#004085;
-    --gold:#f1c40f;
-    --light:#f8f9fa;
-    --border:#d9d9d9;
-    --header:#eef3f8;
-    --shadow:0 4px 15px rgba(0,0,0,.2);
-}
-
-*{
-    box-sizing:border-box;
-}
-
-body{
-    margin:0;
-    padding:15px;
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
-    background:var(--blue);
-    color:#333;
-}
-
-.container{
-    max-width:1500px;
-    margin:auto;
-}
-
-.header{
-    text-align:center;
-    color:white;
-    margin-bottom:18px;
-}
-
-.header h1{
-    margin:0;
-    color:var(--gold);
-    letter-spacing:1px;
-}
-
-.header p{
-    margin:8px 0;
-    font-size:.9rem;
-}
-
-#lastUpdated{
-    display:inline-block;
-    margin-top:8px;
-    padding:6px 12px;
-    border-radius:20px;
-    background:rgba(255,255,255,.12);
-    border:1px solid rgba(255,255,255,.2);
-    font-size:.8rem;
-}
-
-.card{
-    background:white;
-    border-radius:12px;
-    padding:20px;
-    box-shadow:var(--shadow);
-    margin-bottom:20px;
-}
-
-.form-row{
-    display:flex;
-    gap:15px;
-    align-items:end;
-    flex-wrap:wrap;
-}
-
-.form-group{
-    display:flex;
-    flex-direction:column;
-    gap:6px;
-}
-
-.form-group label{
-    font-weight:bold;
-    color:var(--blue);
-}
-
-select,
-input{
-    padding:10px 12px;
-    font-size:15px;
-    border-radius:6px;
-    border:1px solid var(--border);
-}
-
-select{
-    min-width:220px;
-}
-
-input{
-    min-width:260px;
-    text-transform:uppercase;
-}
-
-.button-row{
-    margin-top:18px;
-    display:flex;
-    gap:10px;
-    flex-wrap:wrap;
-}
-
-button{
-    cursor:pointer;
-    border:none;
-    border-radius:6px;
-    padding:10px 18px;
-    font-weight:bold;
-    font-size:15px;
-    transition:.2s;
-}
-
-button:hover{
-    transform:translateY(-1px);
-}
-
-.primary{
-    background:var(--gold);
-    color:var(--blue);
-}
-
-.secondary{
-    background:var(--blue);
-    color:white;
-}
-
-.info-bar{
-    margin:12px 0;
-    color:white;
-    display:flex;
-    justify-content:space-between;
-    flex-wrap:wrap;
-    gap:10px;
-    font-size:.9rem;
-}
-
-#status{
-    font-weight:bold;
-}
-
-#resultTitle{
-    font-weight:bold;
-}
-
-#suggestionBox{
-    display:none;
-    margin-top:15px;
-    background:#fff8db;
-    border:1px solid #ecd27d;
-    border-radius:8px;
-    padding:12px;
-}
-
-#suggestionBox strong{
-    display:block;
-    margin-bottom:10px;
-}
-
-#suggestionLinks{
-    display:flex;
-    flex-wrap:wrap;
-    gap:8px;
-}
-
-.suggestion{
-    padding:6px 12px;
-    border-radius:20px;
-    background:white;
-    border:1px solid var(--blue);
-    color:var(--blue);
-    cursor:pointer;
-    font-size:.9rem;
-}
-
-.suggestion:hover{
-    background:var(--blue);
-    color:white;
-}
-
-#tableWrapper{
-    background:white;
-    border-radius:10px;
-    overflow:auto;
-    max-height:76vh;
-    box-shadow:var(--shadow);
-}
-
-table{
-    width:100%;
-    border-collapse:collapse;
-    background:white;
-}
-
-thead th{
-    position:sticky;
-    top:0;
-    z-index:30;
-    background:var(--header);
-    color:var(--blue);
-    border-bottom:2px solid var(--blue);
-}
-
-th,
-td{
-    border:1px solid #ececec;
-    padding:8px 10px;
-    font-size:14px;
-    white-space:nowrap;
-}
-
-tbody tr:nth-child(even){
-    background:#fafafa;
-}
-
-.sticky-column{
-    position:sticky;
-    left:0;
-    background:white;
-    z-index:20;
-    font-weight:bold;
-}
-
-thead .sticky-column{
-    z-index:40;
-    background:var(--header);
-}
-
-.session-title{
-    background:var(--blue);
-    color:white;
-    font-weight:bold;
-    padding:10px;
-    margin-top:18px;
-    border-radius:6px 6px 0 0;
-}
-
-.validation{
-    display:none;
-    margin-top:15px;
-    padding:12px;
-    border-radius:6px;
-    background:#ffeaea;
-    color:#a40000;
-    border:1px solid #ffbcbc;
-}
-
-.success{
-    display:none;
-    margin-top:15px;
-    padding:12px;
-    border-radius:6px;
-    background:#edfceb;
-    color:#186b18;
-    border:1px solid #9ed39e;
-}
-
-.warning{
-    display:none;
-    margin-top:15px;
-    padding:12px;
-    border-radius:6px;
-    background:#fff8db;
-    color:#755800;
-    border:1px solid #ecd27d;
-}
-
-@media print{
-
-body{
-    background:white;
-}
-
-.header,
-.card,
-#suggestionBox,
-.validation,
-.success{
-    display:none!important;
-}
-
-#tableWrapper{
-    max-height:none;
-    overflow:visible;
-    box-shadow:none;
-}
-
-}
-
-@media(max-width:768px){
-
-body{
-    padding:10px;
-}
-
-.form-row{
-    flex-direction:column;
-    align-items:stretch;
-}
-
-.form-group{
-    width:100%;
-}
-
-select,
-input{
-    width:100%;
-    min-width:unset;
-}
-
-.button-row{
-    flex-direction:column;
-}
-
-button{
-    width:100%;
-}
-
-.info-bar{
-    flex-direction:column;
-}
-
-th,
-td{
-    font-size:13px;
-}
-
-}
-
-/* CUSTOM DISPLAY IMPROVEMENTS */
-
-/* Hide the CSV loaded message */
-#status{
-    display:none;
-}
-
-/* Centre the search controls and buttons */
-.form-row,
-.button-row{
-    justify-content:center;
-}
-
-/* Centre labels and entered information */
-.form-group label,
-select,
-input{
-    text-align:center;
-}
-
-/* Centre the result heading */
-.info-bar{
-    justify-content:center;
-}
-
-#resultTitle{
-    width:100%;
-    text-align:center;
-}
-
-/* Centre table content and use clear black borders */
-th,
-td{
-    text-align:center;
-    border:1px solid #000;
-}
-
-/* Subject and detailed venue columns */
-
-.subject-cell{
-    white-space:normal;
-    min-width:280px;
-    line-height:1.4;
-}
-
-.venue-cell{
-    white-space:normal;
-    min-width:180px;
-    line-height:1.4;
-}
-
-.duty-stage{
-    display:inline-block;
-    min-width:58px;
-    padding:4px 8px;
-    border-radius:12px;
-    font-size:12px;
-    font-weight:bold;
-}
-
-.duty-stage.start{
-    background:#dff4ff;
-    color:#005b87;
-    border:1px solid #8fd4f2;
-}
-
-.duty-stage.end{
-    background:#ffe5e5;
-    color:#9a1515;
-    border:1px solid #efaaaa;
-}
-
-.duty-stage.start-end{
-    background:#efe4ff;
-    color:#5e2697;
-    border:1px solid #c5a3e9;
-}
-
-.duty-stage.middle{
-    background:#f1f1f1;
-    color:#666;
-    border:1px solid #d5d5d5;
-}
-
-</style>
-
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SAS(S) Exam Duty Portal</title>
+  <style>
+    :root {
+      --bg: #f4f6f8;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --line: #d1d5db;
+      --accent: #1f4e78;
+      --accent-soft: #eaf2f8;
+      --start: #fff4cc;
+      --end: #e8f5e9;
+      --danger: #fef2f2;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    header {
+      margin-bottom: 18px;
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: 1.8rem;
+      color: var(--accent);
+    }
+
+    .status {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 18px;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr auto auto;
+      gap: 10px;
+      align-items: end;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 700;
+      font-size: 0.9rem;
+    }
+
+    input, select, button {
+      width: 100%;
+      min-height: 42px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      font-size: 1rem;
+    }
+
+    input, select {
+      padding: 8px 10px;
+      background: white;
+    }
+
+    button {
+      padding: 8px 14px;
+      cursor: pointer;
+      font-weight: 700;
+      background: var(--accent);
+      color: white;
+      border-color: var(--accent);
+    }
+
+    button.secondary {
+      background: white;
+      color: var(--accent);
+    }
+
+    .view-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .view-tabs button {
+      width: auto;
+    }
+
+    .cards {
+      display: grid;
+      gap: 12px;
+    }
+
+    .duty-card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-left: 6px solid var(--accent);
+      border-radius: 10px;
+      padding: 14px;
+    }
+
+    .duty-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+    }
+
+    .teacher {
+      font-weight: 700;
+      font-size: 1.05rem;
+    }
+
+    .time {
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .meta {
+      display: flex;
+      gap: 10px 16px;
+      flex-wrap: wrap;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      margin-top: 8px;
+    }
+
+    .badge.start {
+      background: var(--start);
+      color: #7c5a00;
+    }
+
+    .badge.end {
+      background: var(--end);
+      color: #256029;
+    }
+
+    .badge.both {
+      background: #ede9fe;
+      color: #5b21b6;
+    }
+
+    .empty {
+      background: var(--card);
+      border: 1px dashed var(--line);
+      border-radius: 10px;
+      padding: 18px;
+      color: var(--muted);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+    }
+
+    th, td {
+      border: 1px solid var(--line);
+      padding: 8px;
+      text-align: left;
+      vertical-align: top;
+      font-size: 0.9rem;
+    }
+
+    th {
+      background: var(--accent-soft);
+      position: sticky;
+      top: 0;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    @media (max-width: 760px) {
+      .controls {
+        grid-template-columns: 1fr;
+      }
+
+      .container {
+        padding: 12px;
+      }
+
+      h1 {
+        font-size: 1.45rem;
+      }
+    }
+
+    @media print {
+      body {
+        background: white;
+      }
+
+      .controls, .view-tabs, .status {
+        display: none !important;
+      }
+
+      .panel {
+        border: none;
+        padding: 0;
+      }
+
+      .duty-card {
+        break-inside: avoid;
+      }
+    }
+  </style>
 </head>
-
 <body>
+  <div class="container">
+    <header>
+      <h1>SAS(S) Exam Duty Portal</h1>
+      <div id="status" class="status">Loading live duty data...</div>
+    </header>
 
-<div class="container">
+    <section class="panel">
+      <div class="controls">
+        <div>
+          <label for="teacherInput">Teacher</label>
+          <input id="teacherInput" list="teacherList" placeholder="Type teacher name">
+          <datalist id="teacherList"></datalist>
+        </div>
 
-<div class="header">
+        <div>
+          <label for="dateSelect">Exam Day</label>
+          <select id="dateSelect">
+            <option value="">All dates</option>
+          </select>
+        </div>
 
-<h1>SAS(S) EXAM PORTAL</h1>
+        <button id="findBtn">Find Duties</button>
+        <button id="clearBtn" class="secondary">Clear</button>
+      </div>
+    </section>
 
-<p>Select an Exam Day before searching.</p>
+    <div class="view-tabs">
+      <button id="myViewBtn">Teacher View</button>
+      <button id="masterViewBtn" class="secondary">Full Master View</button>
+      <button id="printBtn" class="secondary">Print</button>
+    </div>
 
-<div id="lastUpdated">
-Loading...
-</div>
-
-</div>
-
-<div class="card">
-
-<div class="form-row">
-
-<div class="form-group">
-
-<label>Exam Day</label>
-
-<select id="daySelect"></select>
-
-</div>
-
-<div class="form-group">
-
-<label>Teacher Name</label>
-
-<input
-id="teacherInput"
-type="text"
-placeholder="ENTER NAME..."
-autocomplete="off">
-
-</div>
-
-</div>
-
-<div class="button-row">
-
-<button class="primary" id="btnSearch">
-Find My Duties
-</button>
-
-<button class="secondary" id="btnExam">
-Exam Schedule
-</button>
-
-<button class="secondary" id="btnMaster">
-Full Master View
-</button>
-
-<button class="secondary" id="btnPrint">
-Print
-</button>
-
-</div>
-
-<div id="suggestionBox">
-
-<strong>No exact match found. Did you mean?</strong>
-
-<div id="suggestionLinks"></div>
-
-</div>
-
-<div class="validation" id="validationBox"></div>
-
-<div class="warning" id="warningBox"></div>
-
-</div>
-
-<div class="info-bar">
-
-<div id="status">
-Loading...
-</div>
-
-<div id="resultTitle"></div>
-
-</div>
-
-<div id="tableWrapper">
-
-<table id="mainTable">
-
-<thead id="tableHead"></thead>
-
-<tbody id="tableBody"></tbody>
-
-</table>
-
-</div>
-
-<div class="success" id="successBox"></div>    
-    
-</div>
+    <section id="teacherView"></section>
+    <section id="masterView" class="hidden"></section>
+  </div>
 
 <script>
+const API_URL = 'https://script.google.com/macros/s/AKfycbxhCKbxEUuVRZ4INGBRbFgutlJ8COVKuzbz1QSHN-OatjsnYAtAuzZg7v1b3sVeyDQ2Sg/exec';
 
-/* ===========================================================
-   CONFIG
-=========================================================== */
+let apiData = null;
+let duties = [];
+let teachers = [];
+let dates = [];
+let currentTeacher = "";
+let currentDate = "";
 
-const CONFIG={
-    daysFile:"days.json",
-    teacherKeyword:"teacher"
-};
+document.getElementById("findBtn").addEventListener("click", showTeacherView);
+document.getElementById("clearBtn").addEventListener("click", clearFilters);
+document.getElementById("myViewBtn").addEventListener("click", () => switchView("teacher"));
+document.getElementById("masterViewBtn").addEventListener("click", () => switchView("master"));
+document.getElementById("printBtn").addEventListener("click", () => window.print());
 
-/* ===========================================================
-   GLOBAL DATA
-=========================================================== */
+loadData();
 
-let rawCSV=[];
-let currentCSV="";
-let teacherRow=-1;
-let headerRow=-1;
-let officialSessionRow=-1;
-let detailedSessionRow=-1;
+async function loadData() {
+  const status = document.getElementById("status");
 
-let teacherNames=[];
-let teacherLookup=Object.create(null);
-let teacherSchedules=Object.create(null);
+  try {
+    const response = await fetch(API_URL, { cache: "no-store" });
 
-let examHeader=[];
-let examSections=[];
-let examPapers=[];
-
-let detailedVenueRows=0;
-let dutySegments=0;
-let dataWarnings=[];
-
-/* ===========================================================
-   INITIALIZATION AND EVENTS
-=========================================================== */
-
-window.addEventListener("load",initialise);
-
-async function initialise(){
-    registerEvents();
-    await loadDays();
-}
-
-function registerEvents(){
-    document.getElementById("btnSearch")
-        .addEventListener("click",()=>searchTeacher());
-
-    document.getElementById("btnExam")
-        .addEventListener("click",displayExamSchedule);
-
-    document.getElementById("btnMaster")
-        .addEventListener("click",displayMasterView);
-
-    document.getElementById("btnPrint")
-        .addEventListener("click",()=>window.print());
-
-    document.getElementById("teacherInput")
-        .addEventListener("keypress",event=>{
-            if(event.key==="Enter"){
-                searchTeacher();
-            }
-        });
-
-    document.getElementById("daySelect")
-        .addEventListener("change",changeDay);
-}
-
-/* ===========================================================
-   FILE LOADING
-=========================================================== */
-
-async function loadDays(){
-    try{
-        const response=await fetch(CONFIG.daysFile);
-
-        if(!response.ok){
-            throw new Error("Unable to load days.json");
-        }
-
-        const days=await response.json();
-        const select=document.getElementById("daySelect");
-        select.innerHTML="";
-
-        days.forEach(day=>{
-            const option=document.createElement("option");
-            option.value=day;
-            option.textContent=day;
-            select.appendChild(option);
-        });
-
-        if(days.length){
-            await loadCSV(days[0]);
-        }
-    }
-    catch(error){
-        showValidation(error.message);
-    }
-}
-
-async function changeDay(){
-    const selected=document.getElementById("daySelect").value;
-    await loadCSV(selected);
-}
-
-async function loadCSV(day){
-    resetData();
-    currentCSV=encodeURIComponent(day)+".csv";
-    document.getElementById("status").textContent="Loading...";
-
-    try{
-        const response=await fetch(currentCSV);
-
-        if(!response.ok){
-            throw new Error("Unable to load "+currentCSV);
-        }
-
-        updateLastModified(response);
-
-        const csvText=await response.text();
-        const parsed=Papa.parse(csvText,{skipEmptyLines:false});
-
-        if(parsed.errors && parsed.errors.length){
-            throw new Error("CSV parsing error: "+parsed.errors[0].message);
-        }
-
-        rawCSV=parsed.data;
-
-        locateSections();
-        buildCanonicalTeacherDirectory();
-        parseExamSchedule();
-        parseExamPaperIndex();
-        buildSchedulesFromDetailedTable();
-        finaliseTeacherDirectory();
-
-        showSuccess(
-            teacherNames.length+
-            " teachers indexed • "+
-            dutySegments+
-            " duties loaded • "+
-            detailedVenueRows+
-            " venue/class groups"
-        );
-
-        if(dataWarnings.length){
-            showWarning(dataWarnings.join(" | "));
-        }
-
-        document.getElementById("status").textContent="";
-        document.getElementById("resultTitle").textContent="";
-        clearTable();
-    }
-    catch(error){
-        document.getElementById("status").textContent="";
-        showValidation(error.message);
-    }
-}
-
-function updateLastModified(response){
-    const last=response.headers.get("Last-Modified");
-
-    if(!last){
-        document.getElementById("lastUpdated").textContent=
-            "Last Updated : Unknown";
-        return;
+    if (!response.ok) {
+      throw new Error("HTTP " + response.status);
     }
 
-    const date=new Date(last);
-    document.getElementById("lastUpdated").textContent=
-        "Last Updated : "+date.toLocaleString("en-SG",{
-            day:"2-digit",
-            month:"short",
-            year:"numeric",
-            hour:"2-digit",
-            minute:"2-digit"
-        });
+    apiData = await response.json();
+    duties = Array.isArray(apiData.duties) ? apiData.duties : [];
+    teachers = Array.isArray(apiData.teachers) ? apiData.teachers : uniqueSorted(duties.map(d => d.teacher));
+    dates = Array.isArray(apiData.dates) ? apiData.dates : uniqueInOrder(duties.map(d => d.dateLabel));
+
+    populateTeacherList();
+    populateDateList();
+
+    status.textContent =
+      `Live data loaded · ${apiData.dutyBlockCount ?? duties.length} duty blocks · Updated ${formatGeneratedTime(apiData.generatedAt)}`;
+
+    renderEmptyTeacherView();
+  } catch (error) {
+    console.error(error);
+    status.textContent = "Failed to load live duty data.";
+    document.getElementById("teacherView").innerHTML =
+      '<div class="empty">Unable to load exam duty data. Please refresh the page later.</div>';
+  }
 }
 
-function resetData(){
-    rawCSV=[];
-    teacherRow=-1;
-    headerRow=-1;
-    officialSessionRow=-1;
-    detailedSessionRow=-1;
+function populateTeacherList() {
+  const list = document.getElementById("teacherList");
+  list.innerHTML = "";
 
-    teacherNames=[];
-    teacherLookup=Object.create(null);
-    teacherSchedules=Object.create(null);
-
-    examHeader=[];
-    examSections=[];
-    examPapers=[];
-
-    detailedVenueRows=0;
-    dutySegments=0;
-    dataWarnings=[];
-
-    hideValidation();
-    hideWarning();
-    hideSuccess();
+  teachers.forEach(name => {
+    const option = document.createElement("option");
+    option.value = name;
+    list.appendChild(option);
+  });
 }
 
-/* ===========================================================
-   SECTION LOCATION
-=========================================================== */
+function populateDateList() {
+  const select = document.getElementById("dateSelect");
+  select.innerHTML = '<option value="">All dates</option>';
 
-function locateSections(){
-    teacherRow=findTeacherRow();
-    headerRow=teacherRow>0 ? teacherRow-1 : -1;
-    officialSessionRow=findOfficialSessionRow();
-    detailedSessionRow=findDetailedSessionRow();
+  dates.forEach(date => {
+    const option = document.createElement("option");
+    option.value = date;
+    option.textContent = date;
+    select.appendChild(option);
+  });
+}
 
-    if(officialSessionRow===-1){
-        throw new Error("Unable to locate the official Session table.");
+function showTeacherView() {
+  const typedName = document.getElementById("teacherInput").value;
+  const date = document.getElementById("dateSelect").value;
+
+  currentTeacher = resolveTeacherName(typedName);
+  currentDate = date;
+
+  switchView("teacher");
+
+  if (!typedName.trim()) {
+    renderEmptyTeacherView("Enter a teacher name.");
+    return;
+  }
+
+  if (!currentTeacher) {
+    const suggestions = nearestTeachers(typedName, 5);
+
+    let html = '<div class="empty">No exact teacher match found.';
+
+    if (suggestions.length) {
+      html += '<br><br>Closest matches:<br>' +
+        suggestions.map(name =>
+          `<button class="secondary" style="width:auto;margin:4px" onclick="selectSuggestion('${escapeJs(name)}')">${escapeHtml(name)}</button>`
+        ).join("");
     }
 
-    if(detailedSessionRow===-1){
-        throw new Error("Unable to locate the detailed Session duty table.");
-    }
+    html += '</div>';
+    document.getElementById("teacherView").innerHTML = html;
+    return;
+  }
+
+  const filtered = duties
+    .filter(d => d.teacher === currentTeacher)
+    .filter(d => !currentDate || d.dateLabel === currentDate)
+    .sort(compareDuties);
+
+  renderDutyCards(filtered, currentTeacher);
 }
 
-function findTeacherRow(){
-    for(let row=0;row<rawCSV.length;row++){
-        const first=cleanCSVCell(rawCSV[row][0]).toLowerCase();
-        if(first.startsWith(CONFIG.teacherKeyword)){
-            return row;
-        }
-    }
-    return -1;
+function selectSuggestion(name) {
+  document.getElementById("teacherInput").value = name;
+  showTeacherView();
 }
 
-function rowContainsSession(row){
-    return (row||[]).some(cell=>
-        cleanCSVCell(cell).toUpperCase().startsWith("SESSION")
-    );
-}
+function renderDutyCards(items, teacherName) {
+  const container = document.getElementById("teacherView");
 
-function findOfficialSessionRow(){
-    const limit=teacherRow===-1 ? rawCSV.length : teacherRow;
+  if (!items.length) {
+    container.innerHTML =
+      `<div class="empty">No duties found for ${escapeHtml(teacherName)}${currentDate ? " on " + escapeHtml(currentDate) : ""}.</div>`;
+    return;
+  }
 
-    for(let row=0;row<limit-1;row++){
-        if(!rowContainsSession(rawCSV[row])){
-            continue;
-        }
+  const grouped = groupBy(items, d => d.dateLabel);
 
-        const headers=(rawCSV[row+1]||[])
-            .map(cell=>cleanCSVCell(cell).toUpperCase());
+  let html = "";
 
-        if(headers.includes("TIME") && headers.includes("SUBJECT")){
-            return row;
-        }
-    }
-    return -1;
-}
+  Object.keys(grouped).forEach(date => {
+    html += `<h2>${escapeHtml(date)}</h2><div class="cards">`;
 
-function findDetailedSessionRow(){
-    const limit=teacherRow===-1 ? rawCSV.length : teacherRow;
-
-    for(let row=0;row<limit-3;row++){
-        if(!rowContainsSession(rawCSV[row])){
-            continue;
-        }
-
-        const starts=rawCSV[row+2]||[];
-        const ends=rawCSV[row+3]||[];
-        const width=Math.max(starts.length,ends.length);
-        let pairs=0;
-
-        for(let column=0;column<width;column++){
-            if(isClock(starts[column]) && isClock(ends[column])){
-                pairs++;
-            }
-        }
-
-        if(pairs>=2){
-            return row;
-        }
-    }
-    return -1;
-}
-
-/* ===========================================================
-   CANONICAL TEACHER DIRECTORY
-   Only the first column of the bottom table is used.
-=========================================================== */
-
-function buildCanonicalTeacherDirectory(){
-    if(teacherRow===-1){
-        return;
-    }
-
-    for(let row=teacherRow+1;row<rawCSV.length;row++){
-        const rawName=cleanCSVCell(rawCSV[row][0]);
-
-        if(!rawName){
-            break;
-        }
-
-        addCanonicalTeacher(cleanTeacherDisplayName(rawName));
-    }
-}
-
-function addCanonicalTeacher(name){
-    const display=cleanTeacherDisplayName(name);
-    const key=personKey(display);
-
-    if(!display || !key){
-        return "";
-    }
-
-    if(!teacherLookup[key]){
-        teacherLookup[key]=display;
-        teacherNames.push(display);
-        teacherSchedules[display]=[];
-    }
-
-    return teacherLookup[key];
-}
-
-function resolveDetailedTeacher(value){
-    const cell=cleanCSVCell(value);
-
-    if(!cell){
-        return "";
-    }
-
-    const target=personKey(cell);
-    const candidates=teacherNames
-        .filter(name=>target.startsWith(personKey(name)))
-        .sort((a,b)=>personKey(b).length-personKey(a).length);
-
-    if(candidates.length){
-        return candidates[0];
-    }
-
-    let cleaned=cell
-        .replace(/\s*[\-(（(]?\s*END\s+(?:AA\s+)?PAPER.*$/i,"")
-        .replace(/\s*[\-(（(]?\s*END\s+AA.*$/i,"")
-        .replace(/\s*\*+\s*$/,"")
-        .trim();
-
-    return addCanonicalTeacher(cleaned);
-}
-
-function cleanTeacherDisplayName(value){
-    return cleanCSVCell(value)
-        .replace(/\s*\*+\s*$/,"")
-        .trim();
-}
-
-function finaliseTeacherDirectory(){
-    teacherNames.sort((a,b)=>a.localeCompare(b,"en",{sensitivity:"base"}));
-    teacherNames.forEach(name=>{
-        teacherSchedules[name]=(teacherSchedules[name]||[])
-            .sort((a,b)=>
-                a.startMinutes-b.startMinutes ||
-                a.venue.localeCompare(b.venue)
-            );
-    });
-}
-
-/* ===========================================================
-   OFFICIAL EXAM SCHEDULE DISPLAY
-=========================================================== */
-
-function parseExamSchedule(){
-    examHeader=[];
-    examSections=[];
-
-    const bands=getSessionBands(rawCSV[officialSessionRow]||[]);
-    const headerCells=rawCSV[officialSessionRow+1]||[];
-
-    bands.forEach((band,index)=>{
-        const columnMap=buildUniqueHeaderMap(headerCells,band);
-
-        if(index===0){
-            examHeader=["Course",...columnMap.map(item=>item.header)];
-        }
-
-        const records=[];
-        let started=false;
-
-        for(let row=officialSessionRow+2;row<rawCSV.length;row++){
-            const source=rawCSV[row]||[];
-            const hasData=columnMap.some(item=>
-                cleanCSVCell(source[item.column])!==""
-            );
-
-            if(!hasData){
-                if(started){
-                    break;
-                }
-                continue;
-            }
-
-            started=true;
-            const record={Course:cleanCSVCell(source[0])};
-
-            columnMap.forEach(item=>{
-                record[item.header]=cleanCSVCell(source[item.column]);
-            });
-
-            records.push(record);
-        }
-
-        examSections.push({title:band.title,rows:records});
-    });
-}
-
-function buildUniqueHeaderMap(headerCells,band){
-    const output=[];
-    const seen=new Set();
-
-    for(let column=band.start;column<=band.end;column++){
-        const header=cleanCSVCell(headerCells[column]);
-
-        if(!header || seen.has(header.toUpperCase())){
-            continue;
-        }
-
-        seen.add(header.toUpperCase());
-        output.push({header:header,column:column});
-    }
-
-    return output;
-}
-
-/* ===========================================================
-   OFFICIAL PAPER INDEX
-=========================================================== */
-
-function parseExamPaperIndex(){
-    examPapers=[];
-
-    const bands=getSessionBands(rawCSV[officialSessionRow]||[]);
-    const headerCells=rawCSV[officialSessionRow+1]||[];
-
-    bands.forEach(band=>{
-        const headerMap=Object.create(null);
-
-        for(let column=band.start;column<=band.end;column++){
-            const header=cleanCSVCell(headerCells[column]).toUpperCase();
-            if(header && headerMap[header]===undefined){
-                headerMap[header]=column;
-            }
-        }
-
-        let started=false;
-
-        for(let row=officialSessionRow+2;row<rawCSV.length;row++){
-            const source=rawCSV[row]||[];
-            const hasData=source.slice(band.start,band.end+1)
-                .some(cell=>cleanCSVCell(cell)!=="");
-
-            if(!hasData){
-                if(started){
-                    break;
-                }
-                continue;
-            }
-
-            started=true;
-
-            const timeText=cleanCSVCell(source[headerMap["TIME"]]);
-            const times=timeText.match(/\d{1,2}:\d{2}/g)||[];
-            const subject=cleanCSVCell(source[headerMap["SUBJECT"]]);
-
-            if(times.length<2 || !subject || subject.toUpperCase()==="NO PAPER"){
-                continue;
-            }
-
-            const examVenue=cleanCSVCell(source[headerMap["EXAM VENUE"]]);
-            const aaRoom=cleanCSVCell(source[headerMap["AA ROOM"]]);
-            const aaEndText=cleanCSVCell(source[headerMap["END TIME (AA ROOM)"]]);
-            const aaTimes=aaEndText.match(/\d{1,2}:\d{2}/g)||[];
-            const end=timeToMinutes(times[1]);
-
-            examPapers.push({
-                session:normaliseSession(band.title),
-                course:cleanCSVCell(source[0]),
-                subject:subject,
-                examVenue:examVenue,
-                aaRoom:aaRoom,
-                start:timeToMinutes(times[0]),
-                end:end,
-                aaEnd:aaTimes.length
-                    ? timeToMinutes(aaTimes[aaTimes.length-1])
-                    : end,
-                classCodes:extractClassCodes(examVenue),
-                roomCodes:extractRoomCodes(examVenue),
-                aaRoomCodes:extractRoomCodes(aaRoom)
-            });
-        }
-    });
-}
-
-/* ===========================================================
-   AUTHORITATIVE DETAILED DUTY TABLE
-=========================================================== */
-
-function buildSchedulesFromDetailedTable(){
-    const bands=getSessionBands(rawCSV[detailedSessionRow]||[]);
-    const startRow=rawCSV[detailedSessionRow+2]||[];
-    const endRow=rawCSV[detailedSessionRow+3]||[];
-    const detailEnd=findDetailedTableEnd(bands);
-
-    bands.forEach(band=>{
-        const timeColumns=[];
-
-        for(let column=band.start;column<=band.end;column++){
-            if(isClock(startRow[column]) && isClock(endRow[column])){
-                timeColumns.push(column);
-            }
-        }
-
-        if(!timeColumns.length){
-            return;
-        }
-
-        const venueColumn=timeColumns[0]-1;
-
-        for(let row=detailedSessionRow+4;row<detailEnd;row++){
-            const source=rawCSV[row]||[];
-            const venue=cleanCSVCell(source[venueColumn]);
-
-            if(!venue){
-                continue;
-            }
-
-            const occupied=timeColumns.filter(column=>
-                cleanCSVCell(source[column])!==""
-            );
-
-            if(!occupied.length){
-                continue;
-            }
-
-            detailedVenueRows++;
-
-            const rowStart=timeToMinutes(startRow[occupied[0]]);
-            const rowEnd=timeToMinutes(endRow[occupied[occupied.length-1]]);
-            const papers=matchPapersToVenueRow(
-                band.title,
-                venue,
-                rowStart,
-                rowEnd
-            );
-
-            const cells=occupied.map((column,index)=>({
-                teacher:resolveDetailedTeacher(source[column]),
-                start:cleanCSVCell(startRow[column]),
-                end:cleanCSVCell(endRow[column]),
-                startMinutes:timeToMinutes(startRow[column]),
-                endMinutes:timeToMinutes(endRow[column]),
-                subject:subjectForDutySlot(
-                    papers,
-                    venue,
-                    timeToMinutes(startRow[column]),
-                    timeToMinutes(endRow[column])
-                ),
-                isStart:index===0,
-                isEnd:index===occupied.length-1
-            }));
-
-            addDutySegmentsForVenueRow(cells,venue);
-        }
-    });
-}
-
-function findDetailedTableEnd(bands){
-    const start=detailedSessionRow+4;
-    const lower=Math.min(...bands.map(band=>band.start));
-    const upper=Math.max(...bands.map(band=>band.end));
-    let blankRows=0;
-
-    for(let row=start;row<rawCSV.length;row++){
-        const hasData=(rawCSV[row]||[])
-            .slice(lower,upper+1)
-            .some(cell=>cleanCSVCell(cell)!=="");
-
-        blankRows=hasData ? 0 : blankRows+1;
-
-        if(blankRows>=2){
-            return row-1;
-        }
-
-        if(teacherRow!==-1 && row>=teacherRow-2){
-            return teacherRow-2;
-        }
-    }
-
-    return teacherRow!==-1 ? teacherRow-2 : rawCSV.length;
-}
-
-function matchPapersToVenueRow(session,venue,rowStart,rowEnd){
-    const sessionKey=normaliseSession(session);
-    const classCodes=extractClassCodes(venue);
-    const roomCodes=extractRoomCodes(venue);
-
-    let candidates=examPapers.filter(paper=>{
-        if(paper.session!==sessionKey){
-            return false;
-        }
-
-        const classMatch=classCodes.some(code=>paper.classCodes.includes(code));
-        const aaMatch=roomCodes.some(room=>paper.aaRoomCodes.includes(room));
-        return classMatch || aaMatch;
+    grouped[date].forEach(duty => {
+      html += dutyCardHtml(duty);
     });
 
-    if(!candidates.length){
-        candidates=examPapers.filter(paper=>
-            paper.session===sessionKey &&
-            rowStart<paperDutyEnd(paper,roomCodes) &&
-            rowEnd>paper.start
-        );
+    html += "</div>";
+  });
 
-        if(candidates.length===1){
-            addDataWarning(
-                session+" / "+venue+
-                " was matched by time because its class group was missing from Exam Venue."
-            );
-        }
-    }
-
-    return candidates;
+  container.innerHTML = html;
 }
 
-function subjectForDutySlot(papers,venue,slotStart,slotEnd){
-    if(!papers.length){
-        return "Schedule mismatch – check CSV";
-    }
+function dutyCardHtml(duty) {
+  const badge = dutyBadgeHtml(duty);
 
-    const roomCodes=extractRoomCodes(venue);
-    let selected=papers;
-
-    if(papers.length>1){
-        const overlapping=papers.filter(paper=>
-            slotStart<paperDutyEnd(paper,roomCodes) &&
-            slotEnd>paper.start
-        );
-
-        if(overlapping.length){
-            selected=overlapping;
-        }
-    }
-
-    const subjects=selected.map(paper=>
-        specialiseLanguageSubject(paper.subject,venue)
-    );
-
-    return [...new Set(subjects)].join(" / ");
+  return `
+    <div class="duty-card">
+      <div class="duty-head">
+        <div class="teacher">${escapeHtml(duty.teacher)}</div>
+        <div class="time">${escapeHtml(duty.startTime)}–${escapeHtml(duty.endTime)}</div>
+      </div>
+      <div class="meta">
+        <span><strong>Venue:</strong> ${escapeHtml(duty.venue || "")}</span>
+        <span><strong>TG:</strong> ${escapeHtml(duty.tg || "")}</span>
+        <span><strong>Periods:</strong> ${escapeHtml(String(duty.periodCount ?? ""))}</span>
+      </div>
+      ${badge}
+    </div>
+  `;
 }
 
-function paperDutyEnd(paper,venueRooms){
-    const isAA=venueRooms.some(room=>paper.aaRoomCodes.includes(room));
-    return isAA ? paper.aaEnd : paper.end;
+function dutyBadgeHtml(duty) {
+  if (duty.startPaper && duty.endPaper) {
+    return '<span class="badge both">Start & End Paper</span>';
+  }
+
+  if (duty.startPaper) {
+    return '<span class="badge start">Start Paper</span>';
+  }
+
+  if (duty.endPaper) {
+    return '<span class="badge end">End Paper</span>';
+  }
+
+  return "";
 }
 
-function specialiseLanguageSubject(subject,venue){
-    const codes=extractClassCodes(venue);
-    const languages=[];
+function switchView(view) {
+  const teacherView = document.getElementById("teacherView");
+  const masterView = document.getElementById("masterView");
+  const myBtn = document.getElementById("myViewBtn");
+  const masterBtn = document.getElementById("masterViewBtn");
 
-    if(codes.some(code=>/^4CL/.test(code))){
-        languages.push("CHINESE");
-    }
-    if(codes.some(code=>/^4ML/.test(code))){
-        languages.push("MALAY");
-    }
-    if(codes.some(code=>/^4TL/.test(code))){
-        languages.push("TAMIL");
-    }
-
-    if(!languages.length){
-        return subject;
-    }
-
-    const selected=[];
-
-    languages.forEach(language=>{
-        const expression=new RegExp(
-            "((?:BASIC\\s+)?"+
-            language+
-            "(?:\\s+LANGUAGE)?\\s+PAPER\\s+\\d+)",
-            "i"
-        );
-        const match=subject.match(expression);
-        if(match){
-            selected.push(match[1]);
-        }
-    });
-
-    if(!selected.length){
-        return subject;
-    }
-
-    const notes=subject.match(/\([^)]*\)/g)||[];
-    return selected.join(" / ")+(notes.length ? " "+notes.join(" ") : "");
+  if (view === "master") {
+    teacherView.classList.add("hidden");
+    masterView.classList.remove("hidden");
+    myBtn.classList.add("secondary");
+    masterBtn.classList.remove("secondary");
+    renderMasterView();
+  } else {
+    masterView.classList.add("hidden");
+    teacherView.classList.remove("hidden");
+    masterBtn.classList.add("secondary");
+    myBtn.classList.remove("secondary");
+  }
 }
 
-function addDutySegmentsForVenueRow(cells,venue){
-    if(!cells.length){
-        return;
-    }
+function renderMasterView() {
+  const container = document.getElementById("masterView");
+  const date = document.getElementById("dateSelect").value;
 
-    let current=createSegment(cells[0],venue);
+  const items = duties
+    .filter(d => !date || d.dateLabel === date)
+    .sort(compareDuties);
 
-    for(let index=1;index<cells.length;index++){
-        const cell=cells[index];
-        const continuous=current.endMinutes===cell.startMinutes;
+  if (!items.length) {
+    container.innerHTML = '<div class="empty">No duties found.</div>';
+    return;
+  }
 
-        if(
-            continuous &&
-            current.teacher===cell.teacher &&
-            current.subject===cell.subject
-        ){
-            current.end=cell.end;
-            current.endMinutes=cell.endMinutes;
-            current.isEnd=current.isEnd || cell.isEnd;
-            continue;
-        }
-
-        current.nextInvigilator=
-            current.teacher===cell.teacher ? "Continues" : cell.teacher;
-        saveDutySegment(current);
-        current=createSegment(cell,venue);
-    }
-
-    current.nextInvigilator="-";
-    saveDutySegment(current);
-}
-
-function createSegment(cell,venue){
-    return {
-        teacher:cell.teacher,
-        start:cell.start,
-        end:cell.end,
-        startMinutes:cell.startMinutes,
-        endMinutes:cell.endMinutes,
-        subject:cell.subject,
-        venue:venue,
-        isStart:cell.isStart,
-        isEnd:cell.isEnd,
-        nextInvigilator:"-"
-    };
-}
-
-function saveDutySegment(segment){
-    if(!segment.teacher){
-        return;
-    }
-
-    if(!teacherSchedules[segment.teacher]){
-        addCanonicalTeacher(segment.teacher);
-    }
-
-    teacherSchedules[segment.teacher].push(segment);
-    dutySegments++;
-}
-
-/* ===========================================================
-   SEARCH AND SUGGESTIONS
-=========================================================== */
-
-function searchTeacher(selectedName=null){
-    clearTable();
-
-    const input=document.getElementById("teacherInput");
-    const name=selectedName || input.value.trim();
-
-    if(!name){
-        return;
-    }
-
-    const teacher=findExactTeacher(name);
-
-    if(!teacher){
-        showSuggestions(name);
-        document.getElementById("resultTitle").textContent=
-            "No exact match found.";
-        return;
-    }
-
-    input.value=teacher;
-    displayTeacherSchedule(teacher);
-}
-
-function findExactTeacher(input){
-    return teacherLookup[personKey(input)]||null;
-}
-
-function showSuggestions(input){
-    const box=document.getElementById("suggestionBox");
-    const links=document.getElementById("suggestionLinks");
-    links.innerHTML="";
-
-    const typed=personKey(input);
-    const suggestions=teacherNames.filter(name=>{
-        const candidate=personKey(name);
-        return candidate.includes(typed) || levenshtein(candidate,typed)<=1;
-    }).slice(0,5);
-
-    if(!suggestions.length){
-        box.style.display="none";
-        return;
-    }
-
-    box.style.display="block";
-
-    suggestions.forEach(name=>{
-        const span=document.createElement("span");
-        span.className="suggestion";
-        span.textContent=name;
-        span.onclick=()=>searchTeacher(name);
-        links.appendChild(span);
-    });
-}
-
-function levenshtein(a,b){
-    const matrix=[];
-
-    for(let row=0;row<=b.length;row++){
-        matrix[row]=[row];
-    }
-    for(let column=0;column<=a.length;column++){
-        matrix[0][column]=column;
-    }
-
-    for(let row=1;row<=b.length;row++){
-        for(let column=1;column<=a.length;column++){
-            matrix[row][column]=b.charAt(row-1)===a.charAt(column-1)
-                ? matrix[row-1][column-1]
-                : Math.min(
-                    matrix[row-1][column-1]+1,
-                    matrix[row][column-1]+1,
-                    matrix[row-1][column]+1
-                );
-        }
-    }
-
-    return matrix[b.length][a.length];
-}
-
-/* ===========================================================
-   DISPLAY TEACHER SCHEDULE
-=========================================================== */
-
-function displayTeacherSchedule(name){
-    const head=document.getElementById("tableHead");
-    const body=document.getElementById("tableBody");
-    const duties=teacherSchedules[name]||[];
-
-    document.getElementById("resultTitle").textContent="Results for "+name;
-
-    if(!duties.length){
-        head.innerHTML="";
-        body.innerHTML='<tr><td colspan="5">No invigilation duties found.</td></tr>';
-        return;
-    }
-
-    head.innerHTML=`
-        <tr>
+  let html = `
+    <div style="overflow:auto">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
             <th>Time</th>
-            <th>Duty Stage</th>
-            <th>Subject Paper</th>
-            <th>Venue / Class</th>
-            <th>Next Invigilator</th>
-        </tr>
-    `;
-
-    body.innerHTML=duties.map(duty=>dutyRowHTML(duty,false)).join("");
-}
-
-function dutyRowHTML(duty,includeTeacher){
-    return `
-        <tr>
-            ${includeTeacher ? `<td>${escapeHTML(duty.teacher)}</td>` : ""}
-            <td>${escapeHTML(formatTimeRange(duty.start,duty.end))}</td>
-            <td>${dutyStageHTML(duty)}</td>
-            <td class="subject-cell">${escapeHTML(duty.subject)}</td>
-            <td class="venue-cell">${escapeHTML(duty.venue)}</td>
-            <td>${escapeHTML(duty.nextInvigilator)}</td>
-        </tr>
-    `;
-}
-
-function dutyStageHTML(duty){
-    if(duty.isStart && duty.isEnd){
-        return '<span class="duty-stage start-end">START &amp; END</span>';
-    }
-    if(duty.isStart){
-        return '<span class="duty-stage start">START</span>';
-    }
-    if(duty.isEnd){
-        return '<span class="duty-stage end">END</span>';
-    }
-    return '<span class="duty-stage middle">—</span>';
-}
-
-/* ===========================================================
-   DISPLAY OFFICIAL EXAM SCHEDULE
-=========================================================== */
-
-function displayExamSchedule(){
-    clearTable();
-    document.getElementById("resultTitle").textContent="Examination Schedule";
-
-    const head=document.getElementById("tableHead");
-    const body=document.getElementById("tableBody");
-    head.innerHTML="";
-    body.innerHTML="";
-
-    if(!examSections.length){
-        body.innerHTML="<tr><td>No examination schedule found.</td></tr>";
-        return;
-    }
-
-    examSections.forEach(section=>{
-        const sessionRow=document.createElement("tr");
-        const sessionCell=document.createElement("td");
-        sessionCell.colSpan=examHeader.length;
-        sessionCell.textContent=section.title;
-        sessionCell.style.background="#004085";
-        sessionCell.style.color="white";
-        sessionCell.style.fontWeight="bold";
-        sessionCell.style.fontSize="15px";
-        sessionRow.appendChild(sessionCell);
-        body.appendChild(sessionRow);
-
-        const heading=document.createElement("tr");
-        examHeader.forEach((header,index)=>{
-            const th=document.createElement("th");
-            th.textContent=header;
-            if(index===0){
-                th.classList.add("sticky-column");
-            }
-            heading.appendChild(th);
-        });
-        body.appendChild(heading);
-
-        section.rows.forEach(record=>{
-            const row=document.createElement("tr");
-            examHeader.forEach((header,index)=>{
-                const cell=document.createElement("td");
-                cell.textContent=record[header]||"";
-                if(index===0){
-                    cell.classList.add("sticky-column");
-                }
-                row.appendChild(cell);
-            });
-            body.appendChild(row);
-        });
-    });
-}
-
-/* ===========================================================
-   FULL MASTER VIEW FROM THE DETAILED SESSION TABLE
-=========================================================== */
-
-function displayMasterView(){
-    clearTable();
-    document.getElementById("resultTitle").textContent="Full Master View";
-
-    const head=document.getElementById("tableHead");
-    const body=document.getElementById("tableBody");
-
-    head.innerHTML=`
-        <tr>
             <th>Teacher</th>
-            <th>Time</th>
-            <th>Duty Stage</th>
-            <th>Subject Paper</th>
-            <th>Venue / Class</th>
-            <th>Next Invigilator</th>
-        </tr>
+            <th>Venue</th>
+            <th>TG</th>
+            <th>Stage</th>
+          </tr>
+        </thead>
+        <tbody>
+  `;
+
+  items.forEach(d => {
+    let stage = "";
+
+    if (d.startPaper && d.endPaper) stage = "Start & End";
+    else if (d.startPaper) stage = "Start";
+    else if (d.endPaper) stage = "End";
+
+    html += `
+      <tr>
+        <td>${escapeHtml(d.dateLabel)}</td>
+        <td>${escapeHtml(d.startTime)}–${escapeHtml(d.endTime)}</td>
+        <td>${escapeHtml(d.teacher)}</td>
+        <td>${escapeHtml(d.venue || "")}</td>
+        <td>${escapeHtml(d.tg || "")}</td>
+        <td>${stage}</td>
+      </tr>
     `;
+  });
 
-    const duties=[];
-    teacherNames.forEach(name=>{
-        (teacherSchedules[name]||[]).forEach(duty=>duties.push(duty));
-    });
-
-    duties.sort((a,b)=>
-        a.startMinutes-b.startMinutes ||
-        a.venue.localeCompare(b.venue) ||
-        a.teacher.localeCompare(b.teacher)
-    );
-
-    body.innerHTML=duties.length
-        ? duties.map(duty=>dutyRowHTML(duty,true)).join("")
-        : '<tr><td colspan="6">No invigilation duties found.</td></tr>';
+  html += "</tbody></table></div>";
+  container.innerHTML = html;
 }
 
-/* ===========================================================
-   MESSAGE AND TABLE HELPERS
-=========================================================== */
-
-function showValidation(message){
-    const box=document.getElementById("validationBox");
-    box.style.display="block";
-    box.textContent=message;
+function clearFilters() {
+  document.getElementById("teacherInput").value = "";
+  document.getElementById("dateSelect").value = "";
+  currentTeacher = "";
+  currentDate = "";
+  switchView("teacher");
+  renderEmptyTeacherView();
 }
 
-function hideValidation(){
-    document.getElementById("validationBox").style.display="none";
+function renderEmptyTeacherView(message = "Enter a teacher name to view duties.") {
+  document.getElementById("teacherView").innerHTML =
+    `<div class="empty">${escapeHtml(message)}</div>`;
 }
 
-function showWarning(message){
-    const box=document.getElementById("warningBox");
-    if(!box){
-        return;
+function resolveTeacherName(input) {
+  const raw = String(input || "");
+  if (!raw) return "";
+
+  const exact = teachers.find(name => name === raw);
+  if (exact) return exact;
+
+  const lower = raw.toLowerCase();
+  const ciExact = teachers.find(name => name.toLowerCase() === lower);
+  return ciExact || "";
+}
+
+function nearestTeachers(input, limit) {
+  const raw = String(input || "").trim().toLowerCase();
+  if (!raw) return [];
+
+  return teachers
+    .map(name => ({
+      name,
+      score: levenshtein(raw, name.toLowerCase())
+    }))
+    .sort((a, b) => a.score - b.score || a.name.localeCompare(b.name))
+    .slice(0, limit)
+    .map(x => x.name);
+}
+
+function compareDuties(a, b) {
+  const dateOrderA = dates.indexOf(a.dateLabel);
+  const dateOrderB = dates.indexOf(b.dateLabel);
+
+  if (dateOrderA !== dateOrderB) {
+    return dateOrderA - dateOrderB;
+  }
+
+  const timeA = timeToMinutes(a.startTime);
+  const timeB = timeToMinutes(b.startTime);
+
+  if (timeA !== timeB) {
+    return timeA - timeB;
+  }
+
+  if ((a.venue || "") !== (b.venue || "")) {
+    return String(a.venue || "").localeCompare(String(b.venue || ""));
+  }
+
+  return String(a.teacher || "").localeCompare(String(b.teacher || ""));
+}
+
+function timeToMinutes(value) {
+  const s = String(value || "").trim().toUpperCase();
+  const match = s.match(/^(\d{1,2}):(\d{2})(?:\s*(AM|PM))?$/);
+
+  if (!match) return 9999;
+
+  let hour = Number(match[1]);
+  const minute = Number(match[2]);
+  const ampm = match[3];
+
+  if (ampm === "PM" && hour !== 12) hour += 12;
+  if (ampm === "AM" && hour === 12) hour = 0;
+
+  return hour * 60 + minute;
+}
+
+function groupBy(items, keyFn) {
+  return items.reduce((acc, item) => {
+    const key = keyFn(item);
+    (acc[key] ||= []).push(item);
+    return acc;
+  }, {});
+}
+
+function uniqueSorted(items) {
+  return [...new Set(items.filter(Boolean))].sort();
+}
+
+function uniqueInOrder(items) {
+  return [...new Set(items.filter(Boolean))];
+}
+
+function levenshtein(a, b) {
+  const dp = Array.from({ length: a.length + 1 }, () =>
+    Array(b.length + 1).fill(0)
+  );
+
+  for (let i = 0; i <= a.length; i++) dp[i][0] = i;
+  for (let j = 0; j <= b.length; j++) dp[0][j] = j;
+
+  for (let i = 1; i <= a.length; i++) {
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+
+      dp[i][j] = Math.min(
+        dp[i - 1][j] + 1,
+        dp[i][j - 1] + 1,
+        dp[i - 1][j - 1] + cost
+      );
     }
-    box.style.display="block";
-    box.textContent="Data warning: "+message;
+  }
+
+  return dp[a.length][b.length];
 }
 
-function hideWarning(){
-    const box=document.getElementById("warningBox");
-    if(box){
-        box.style.display="none";
-    }
+function formatGeneratedTime(value) {
+  if (!value) return "now";
+
+  const d = new Date(value);
+
+  if (Number.isNaN(d.getTime())) {
+    return String(value);
+  }
+
+  return d.toLocaleString();
 }
 
-function showSuccess(message){
-    const box=document.getElementById("successBox");
-    box.style.display="block";
-    box.textContent=message;
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
-function hideSuccess(){
-    document.getElementById("successBox").style.display="none";
+function escapeJs(value) {
+  return String(value ?? "")
+    .replace(/\\/g, "\\\\")
+    .replace(/'/g, "\\'");
 }
-
-function clearTable(){
-    document.getElementById("tableHead").innerHTML="";
-    document.getElementById("tableBody").innerHTML="";
-    document.getElementById("suggestionBox").style.display="none";
-}
-
-function addDataWarning(message){
-    if(!dataWarnings.includes(message)){
-        dataWarnings.push(message);
-    }
-}
-
-/* ===========================================================
-   SMALL HELPERS
-=========================================================== */
-
-function cleanCSVCell(value){
-    return String(value||"").replace(/\s+/g," ").trim();
-}
-
-function personKey(value){
-    return String(value||"").toUpperCase().replace(/[^A-Z0-9]/g,"");
-}
-
-function normaliseSession(value){
-    return cleanCSVCell(value).toUpperCase();
-}
-
-function isClock(value){
-    return /^\d{1,2}:\d{2}$/.test(cleanCSVCell(value));
-}
-
-function timeToMinutes(value){
-    const match=String(value||"").match(/(\d{1,2}):(\d{2})/);
-    return match ? Number(match[1])*60+Number(match[2]) : -1;
-}
-
-function getSessionBands(row){
-    const bands=[];
-    let column=0;
-
-    while(column<row.length){
-        const title=cleanCSVCell(row[column]);
-
-        if(!title.toUpperCase().startsWith("SESSION")){
-            column++;
-            continue;
-        }
-
-        const start=column;
-        column++;
-
-        while(
-            column<row.length &&
-            cleanCSVCell(row[column]).toUpperCase()===title.toUpperCase()
-        ){
-            column++;
-        }
-
-        bands.push({title:title,start:start,end:column-1});
-    }
-
-    return bands;
-}
-
-function extractClassCodes(value){
-    return [...new Set(
-        String(value||"").toUpperCase().match(/\b4[A-Z]{2,4}\b/g)||[]
-    )];
-}
-
-function extractRoomCodes(value){
-    return [...new Set(
-        String(value||"").toUpperCase().match(/\b[A-Z]\d{3}\b/g)||[]
-    )];
-}
-
-function escapeHTML(text){
-    return String(text)
-        .replace(/&/g,"&amp;")
-        .replace(/</g,"&lt;")
-        .replace(/>/g,"&gt;")
-        .replace(/"/g,"&quot;")
-        .replace(/'/g,"&#039;");
-}
-
-function formatTimeRange(start,end){
-    return start+" - "+end;
-}
-
-
 </script>
-
-<script src="mobile-cards.js"></script>
-
 </body>
 </html>
