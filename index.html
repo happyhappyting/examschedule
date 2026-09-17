@@ -308,16 +308,9 @@ const CACHE_DATE_KEY = "examDutyPortalCacheDate";
 
 async function initialLoad() {
   const now = new Date();
-
-  if (now.getHours() < 8) {
-    await loadData();
-    return;
-  }
-
   const cached = localStorage.getItem(CACHE_KEY);
-  const cachedDate = localStorage.getItem(CACHE_DATE_KEY);
 
-  if (cached && cachedDate === todayKey()) {
+  if (cached) {
     try {
       data = JSON.parse(cached);
 
@@ -328,8 +321,15 @@ async function initialLoad() {
       populateTeachers();
       populateDates();
 
-      document.getElementById("status").textContent =
-        `Saved data · ${data.dutyBlockCount ?? duties.length} duty blocks · Updated ${formatDateTime(data.generatedAt)}`;
+      if (now.getHours() < 8) {
+        document.getElementById("status").textContent =
+          `Showing saved data · Updated ${formatDateTime(data.generatedAt)} · Checking for latest update...`;
+
+        loadData();
+      } else {
+        document.getElementById("status").textContent =
+          `Showing saved data · Updated ${formatDateTime(data.generatedAt)}`;
+      }
 
       return;
     } catch (e) {
