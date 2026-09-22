@@ -321,11 +321,22 @@ async function initialLoad() {
       populateTeachers();
       populateDates();
 
-      if (now.getHours() < 8) {
-        document.getElementById("status").textContent =
-          `Showing saved data · Updated ${formatDateTime(data.generatedAt)} · Checking for latest update...`;
+      const generatedAt = new Date(data.generatedAt);
 
-        loadData();
+      const sameDay =
+        generatedAt.toDateString() === now.toDateString();
+
+      const cacheAfter8 =
+        sameDay && generatedAt.getHours() >= 8;
+
+      const before8am =
+        now.getHours() < 8;
+
+      if (before8am || !cacheAfter8) {
+        document.getElementById("status").textContent =
+          `Showing saved data · Fetching latest...`;
+
+        await loadData();
       } else {
         document.getElementById("status").textContent =
           `Showing saved data · Updated ${formatDateTime(data.generatedAt)}`;
