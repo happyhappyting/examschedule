@@ -298,16 +298,10 @@ let dates = [];
 document.getElementById("findBtn").addEventListener("click", findDuties);
 document.getElementById("clearBtn").addEventListener("click", clearAll);
 
-document.getElementById("refreshBtn").addEventListener("click", () => {
-  localStorage.removeItem(CACHE_KEY);
-  localStorage.removeItem(CACHE_DATE_KEY);
-
-  const url = new URL(window.location.href);
-  url.searchParams.set("refresh", Date.now());
-
-  window.location.replace(url.toString());
+document.getElementById("refreshBtn").addEventListener("click", async () => {
+  document.getElementById("status").textContent = "Refreshing live data...";
+  await loadData();
 });
-  
 document.getElementById("teacherInput").addEventListener("keydown", e => {
   if (e.key === "Enter") findDuties();
 });
