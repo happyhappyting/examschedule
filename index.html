@@ -493,6 +493,10 @@ function renderTeacherDuties(groupName, items) {
             <span><strong>Venue:</strong> ${escapeHtml(duty.venue || "")}</span>
             <span><strong>TG:</strong> ${escapeHtml(duty.tg || "")}</span>
             <span><strong>Duty Stage:</strong> ${escapeHtml(stageText(duty))}</span>
+
+            ${duty.startPaper && duty.paperStartTime
+              ? `<span><strong>Paper Starts:</strong> ${escapeHtml(duty.paperStartTime)}</span>`
+              : ""}
           </div>
 
           <div class="next"><strong>Next Invigilator:</strong> ${escapeHtml(next)}</div>
