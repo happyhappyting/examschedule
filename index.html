@@ -331,10 +331,10 @@ async function initialLoad() {
         generatedAt.toDateString() === now.toDateString();
 
       const cacheAfter8 =
-        sameDay && generatedAt.getHours() >= 8;
+        sameDay && generatedAt.getHours() >= 18;
 
       const before8am =
-        now.getHours() < 8;
+        now.getHours() < 18;
 
       document.getElementById("status").textContent =
         `Showing saved data · Updated ${formatDateTime(savedData.generatedAt)}`;
