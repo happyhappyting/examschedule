@@ -456,6 +456,46 @@ async function loadData() {
 
 initialLoad();
 
+function parseExamDateLabel(label) {
+  const s = String(label || "").toUpperCase().trim();
+
+  const match = s.match(/^(\d{1,2})\s+([A-Z]{3})/);
+  if (!match) return null;
+
+  const day = Number(match[1]);
+  const monText = match[2];
+
+  const monthMap = {
+    JAN: 0,
+    FEB: 1,
+    MAR: 2,
+    APR: 3,
+    MAY: 4,
+    JUN: 5,
+    JUL: 6,
+    AUG: 7,
+    SEP: 8,
+    OCT: 9,
+    NOV: 10,
+    DEC: 11
+  };
+
+  if (!(monText in monthMap)) return null;
+
+  const now = new Date();
+  return new Date(now.getFullYear(), monthMap[monText], day);
+}
+
+function isPastExamDate(label) {
+  const examDate = parseExamDateLabel(label);
+  if (!examDate) return false;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  return examDate < today;
+}
+  
 function populateTeachers() {
   const list = document.getElementById("teacherList");
   list.innerHTML = "";
@@ -473,16 +513,21 @@ function populateDates() {
 
   select.innerHTML = '<option value="">All dates</option>';
 
-  dates.forEach(date => {
+  const visibleDates = dates.filter(date => !isPastExamDate(date));
+
+  visibleDates.forEach(date => {
     const option = document.createElement("option");
     option.value = date;
     option.textContent = date;
     select.appendChild(option);
   });
 
-  if (dates.includes(current)) {
+  if (visibleDates.includes(current)) {
     select.value = current;
+  } else {
+    select.value = "";
   }
+}
 }
 
 function findDuties() {
@@ -517,6 +562,7 @@ function findDuties() {
 
   const items = duties
     .filter(d => d.teacherGroup === groupName)
+    .filter(d => !isPastExamDate(d.dateLabel))
     .filter(d => !date || d.dateLabel === date)
     .sort(compareDuties);
 
