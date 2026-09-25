@@ -441,9 +441,16 @@ async function loadData() {
     populateTeachers();
     populateDates();
 
-    status.textContent =
-      `Live data · ${data.dutyBlockCount ?? duties.length} duty blocks · Updated ${formatDateTime(data.generatedAt)}`;
+status.textContent =
+  `Live data · ${data.dutyBlockCount ?? duties.length} duty blocks · Updated ${formatDateTime(data.generatedAt)}`;
 
+const currentTeacher =
+  document.getElementById("teacherInput").value;
+
+if (currentTeacher.trim()) {
+  findDuties();
+}
+    
   } catch (error) {
     console.error(error);
 
